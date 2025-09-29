@@ -812,22 +812,36 @@ class PhotoboothApp:
         self.root.after(3000, self.back_to_main)
     
     def back_to_main(self):
-        """Return to main form"""
+        """Return to main form with all buttons"""
+        """Return to main form with all buttons"""
+        print("Back to main called - starting cleanup...")
+        
         # Stop any monitoring
         if hasattr(self, 'monitoring'):
             self.monitoring = False
+            print("Stopped monitoring")
         
         # Clear transaction data
         self.transaction_data = None
         self.current_view = "main"
+        print("Cleared transaction data")
         
-        # Clear all widgets from root and recreate
+        # Clear all widgets from root
         for widget in self.root.winfo_children():
             widget.destroy()
+        print("Cleared all widgets")
         
-        # Recreate the main application
-        self.setup_window()
+        # Reset any state variables
+        self.additional_options_visible = False
+        print("Reset state variables")
+        
+        # Only recreate widgets, don't setup window again
         self.create_widgets()
+        print("Recreated main form widgets")
+        
+        # Force update the display
+        self.root.update()
+        print("Updated display - main form should be visible now")
 
 if __name__ == "__main__":
     app = PhotoboothApp()
