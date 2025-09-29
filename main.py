@@ -4,9 +4,35 @@ import sys
 import socket
 import threading
 import time
+import requests
+import json
+import hashlib
+import hmac
+from datetime import datetime
+from PIL import Image, ImageTk
+import io
+import base64
 
 class PhotoboothApp:
     def __init__(self):
+        # Tripay configuration - Using PHP Forwarder for localhost compatibility
+        self.USE_PHP_FORWARDER = True
+        self.PHP_FORWARDER_CONFIG = {
+            "baseUrl": "https://forwarder.snapbooth.click/tripay-forwarder.php",
+            "apiKey": "KnSJAP2881392SQIisuQ"
+        }
+        
+        # Production credentials (matching Next.js config)
+        self.TRIPAY_API_KEY = "aNe8LAdn2lRfj4lrkfFkTz3vqzJJ8k646ccQyOLg"
+        self.TRIPAY_PRIVATE_KEY = "GmsLp-OwNlg-XG9Zp-0Plas-zw5lo"
+        self.TRIPAY_MERCHANT_CODE = "T44241"
+        self.TRIPAY_BASE_URL = self.PHP_FORWARDER_CONFIG["baseUrl"] if self.USE_PHP_FORWARDER else "https://tripay.co.id/api"
+        
+        # UI state
+        self.current_view = "main"  # Track current view: "main" or "qris"
+        self.transaction_data = None
+        self.payment_status_thread = None
+        
         self.root = tk.Tk()
         self.setup_window()
         self.create_widgets()
@@ -171,9 +197,93 @@ class PhotoboothApp:
         self.start_network_monitoring()
         
     def qris_login(self):
-        print("QRIS login selected")
-        # Add your QRIS login logic here
+        """Replace main form with QRIS payment form"""
+        print("QRIS login selected - Creating payment form")
+        self.current_view = "qris"
         
+        # Clear the main frame
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        
+        # Create new QRIS payment form
+        self.create_qris_payment_form()
+    
+    def create_qris_payment_form(self):
+        """Create the QRIS payment form interface"""
+        # Create main container frame
+        main_frame = tk.Frame(self.root, bg='#FFFFFF')
+        main_frame.pack(expand=True, fill='both')
+        
+        # Create wrapper frame for the QRIS payment
+        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
+        wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Title label
+        title_label = tk.Label(
+            wrapper_frame,
+            text="Lakukan Pembayaran QRIS Sebesar 30.000",
+            font=('Arial', 20, 'bold'),
+            fg='#0A3766',
+            bg='#A5DBEB',
+            pady=15
+        )
+        title_label.pack(pady=(30, 20))
+        
+        # Status label
+        self.qris_status_label = tk.Label(
+            wrapper_frame,
+            text="Membuat transaksi...",
+            font=('Arial', 14),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        self.qris_status_label.pack(pady=10)
+        
+        # QR Code container
+        self.qr_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='solid', bd=2)
+        self.qr_frame.pack(pady=20, padx=40)
+        
+        # QR Code placeholder
+        self.qr_label = tk.Label(
+            self.qr_frame,
+            text="Memuat QR Code...",
+            font=('Arial', 12),
+            fg='#666666',
+            bg='#FFFFFF',
+            width=30,
+            height=15
+        )
+        self.qr_label.pack(padx=20, pady=20)
+        
+        # Payment instructions
+        instructions_label = tk.Label(
+            wrapper_frame,
+            text="Scan QR Code dengan aplikasi pembayaran Anda",
+            font=('Arial', 12),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        instructions_label.pack(pady=10)
+        
+        # Back button
+        back_button = tk.Button(
+            wrapper_frame,
+            text="Kembali",
+            font=('Arial', 14, 'bold'),
+            fg='#FFFFFF',
+            bg='#DC3545',
+            activebackground='#C82333',
+            activeforeground='#FFFFFF',
+            relief='flat',
+            padx=30,
+            pady=10,
+            command=self.back_to_main
+        )
+        back_button.pack(pady=(20, 30))
+        
+        # Start creating Tripay transaction
+        threading.Thread(target=self.create_tripay_transaction, daemon=True).start()
+    
     def card_login(self):
         print("Card login selected")
         # Add your card login logic here
@@ -444,6 +554,280 @@ class PhotoboothApp:
         
     def run(self):
         self.root.mainloop()
+
+    def generate_signature(self, payload):
+        """Generate HMAC signature for Tripay API"""
+        return hmac.new(
+            self.TRIPAY_PRIVATE_KEY.encode('utf-8'),
+            payload.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+    
+    def generate_merchant_ref(self):
+        """Generate unique merchant reference"""
+        timestamp = int(datetime.now().timestamp())
+        return f"PHOTOBOOTH-{timestamp}"
+    
+    def create_tripay_transaction(self):
+        """Create QRIS transaction with Tripay API using PHP forwarder"""
+        try:
+            # Update status
+            self.root.after(0, lambda: self.qris_status_label.config(text="Membuat transaksi QRIS..."))
+            
+            # Generate merchant reference (matching Next.js logic)
+            timestamp = int(datetime.now().timestamp())
+            import random
+            import string
+            random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            merchant_ref = f"SNAPBOOTH-{timestamp}-{random_str}"
+            
+            # Prepare transaction data for PHP forwarder
+            payload_data = {
+                "amount": 30000,
+                "customerDetails": {
+                    "first_name": "Customer Photobooth",
+                    "email": "customer@photobooth.com",
+                    "phone": "081234567890"
+                },
+                "merchantRef": merchant_ref,
+                "method": "QRIS"
+            }
+            
+            if self.USE_PHP_FORWARDER:
+                # Use PHP forwarder (matching Next.js implementation)
+                headers = {
+                    "Content-Type": "application/json",
+                    "X-API-Key": self.PHP_FORWARDER_CONFIG["apiKey"],
+                    "Accept": "application/json"
+                }
+                
+                # Make request to PHP forwarder
+                response = requests.post(
+                    f"{self.TRIPAY_BASE_URL}?action=create-transaction",
+                    headers=headers,
+                    json=payload_data,
+                    timeout=30
+                )
+            else:
+                # Direct API call (fallback)
+                payload_string = json.dumps(payload_data, separators=(',', ':'))
+                signature = self.generate_signature(payload_string)
+                
+                headers = {
+                    "Authorization": f"Bearer {self.TRIPAY_API_KEY}",
+                    "Content-Type": "application/json",
+                    "X-Signature": signature
+                }
+                
+                response = requests.post(
+                    f"{self.TRIPAY_BASE_URL}/transaction/create",
+                    headers=headers,
+                    json=payload_data,
+                    timeout=30
+                )
+            
+            print(f"Response Status: {response.status_code}")
+            response_text = response.text
+            print(f"Raw Response: {response_text}")
+            
+            if response.status_code == 200:
+                result = response.json()
+                print(f"Parsed Response: {json.dumps(result, indent=2)}")
+                
+                if result.get('success'):
+                    self.transaction_data = result['data']
+                    self.root.after(0, self.display_qr_code)
+                else:
+                    error_msg = result.get('message', 'Unknown error')
+                    self.root.after(0, lambda: self.show_error(f"Gagal membuat transaksi: {error_msg}"))
+            else:
+                self.root.after(0, lambda: self.show_error(f"HTTP Error: {response.status_code}"))
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Network error: {e}")
+            self.root.after(0, lambda: self.show_network_error())
+        except Exception as e:
+            print(f"Error: {e}")
+            self.root.after(0, lambda: self.show_error(f"Error: {str(e)}"))
+    
+    def display_qr_code(self):
+        """Display the QR code from transaction data"""
+        try:
+            if not self.transaction_data:
+                self.show_error("QR Code tidak tersedia")
+                return
+            
+            # Update status
+            self.qris_status_label.config(text="Scan QR Code untuk melakukan pembayaran")
+            
+            # Get QR code URL from transaction data
+            qr_url = self.transaction_data.get('qr_url')
+            if not qr_url:
+                self.show_error("QR Code URL tidak tersedia")
+                return
+            
+            # Download QR code image from URL
+            response = requests.get(qr_url, timeout=10)
+            if response.status_code == 200:
+                # Load QR code image
+                qr_image = Image.open(io.BytesIO(response.content))
+                
+                # Resize QR code for display
+                qr_image = qr_image.resize((250, 250), Image.Resampling.LANCZOS)
+                qr_photo = ImageTk.PhotoImage(qr_image)
+                
+                # Update QR label
+                self.qr_label.config(
+                    image=qr_photo,
+                    text="",
+                    width=250,
+                    height=250
+                )
+                self.qr_label.image = qr_photo  # Keep a reference
+                
+                # Start payment status monitoring
+                threading.Thread(target=self.monitor_payment_status, daemon=True).start()
+            else:
+                self.show_error("Gagal mengunduh QR Code")
+            
+        except Exception as e:
+            print(f"QR Code display error: {e}")
+            self.show_error(f"Error displaying QR code: {str(e)}")
+    
+    def monitor_payment_status(self):
+        """Monitor payment status using PHP forwarder"""
+        self.monitoring = True
+        
+        def check_status():
+            while self.monitoring and self.transaction_data:
+                try:
+                    reference = self.transaction_data.get('reference')
+                    if not reference:
+                        break
+                    
+                    if self.USE_PHP_FORWARDER:
+                        # Use PHP forwarder for status check
+                        headers = {
+                            "Content-Type": "application/json",
+                            "X-API-Key": self.PHP_FORWARDER_CONFIG["apiKey"],
+                            "Accept": "application/json"
+                        }
+                        
+                        response = requests.get(
+                            f"{self.TRIPAY_BASE_URL}?action=check-status&reference={reference}",
+                            headers=headers,
+                            timeout=10
+                        )
+                    else:
+                        # Direct API call (fallback)
+                        headers = {
+                            "Authorization": f"Bearer {self.TRIPAY_API_KEY}",
+                            "Content-Type": "application/json"
+                        }
+                        
+                        response = requests.get(
+                            f"{self.TRIPAY_BASE_URL}/transaction/detail?reference={reference}",
+                            headers=headers,
+                            timeout=10
+                        )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if result.get('success'):
+                            status = result['data'].get('status')
+                            if status == 'PAID':
+                                self.root.after(0, self.payment_success)
+                                break
+                            elif status in ['EXPIRED', 'FAILED', 'CANCELLED']:
+                                self.root.after(0, lambda: self.show_error(f"Pembayaran {status.lower()}"))
+                                break
+                    
+                except requests.exceptions.RequestException:
+                    # Network error during monitoring - return to main
+                    self.root.after(0, self.show_network_error)
+                    break
+                except Exception as e:
+                    print(f"Status check error: {e}")
+                    break
+                
+                time.sleep(5)
+        
+        # Start monitoring in separate thread
+        import threading
+        status_thread = threading.Thread(target=check_status, daemon=True)
+        status_thread.start()
+    
+    def show_network_error(self):
+        """Handle network error - return to main form"""
+        self.qris_status_label.config(text="Koneksi terputus. Kembali ke menu utama...")
+        self.root.after(2000, self.back_to_main)  # Return to main after 2 seconds
+    
+    def payment_success(self):
+        """Handle successful payment - hide QR code and show 'Mulai Foto' button"""
+        # Stop monitoring thread
+        if hasattr(self, 'monitoring') and self.monitoring:
+            self.monitoring = False
+        
+        # Hide QR code
+        if hasattr(self, 'qr_label'):
+            self.qr_label.pack_forget()
+        
+        # Update status
+        self.qris_status_label.config(
+            text="✅ Pembayaran Berhasil!",
+            fg="#28a745",
+            font=("Arial", 14, "bold")
+        )
+        
+        # Hide payment instructions
+        if hasattr(self, 'qris_instructions_label'):
+            self.qris_instructions_label.pack_forget()
+        
+        # Create 'Mulai Foto' button
+        self.start_photo_button = tk.Button(
+            self.qris_wrapper_frame,
+            text="Mulai Foto",
+            font=("Arial", 16, "bold"),
+            bg="#28a745",
+            fg="white",
+            padx=40,
+            pady=15,
+            command=self.start_photo_session,
+            cursor="hand2"
+        )
+        self.start_photo_button.pack(pady=20)
+    
+    def start_photo_session(self):
+        """Start the photo session"""
+        # For now, just show a message - you can implement actual photo logic here
+        messagebox.showinfo("Photobooth", "Memulai sesi foto!\n\nFitur ini akan diimplementasikan selanjutnya.")
+        # After photo session, return to main
+        self.back_to_main()
+    
+    def show_error(self, message):
+        """Show error message and return to main form"""
+        self.qris_status_label.config(text=f"❌ {message}", fg='#dc3545')
+        print(f"Error: {message}")
+        # Auto return to main after 3 seconds on error
+        self.root.after(3000, self.back_to_main)
+    
+    def back_to_main(self):
+        """Return to main form"""
+        # Stop any monitoring
+        if hasattr(self, 'monitoring'):
+            self.monitoring = False
+        
+        # Clear transaction data
+        self.transaction_data = None
+        self.current_view = "main"
+        
+        # Clear all widgets from root and recreate
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        
+        # Recreate the main application
+        self.setup_window()
+        self.create_widgets()
 
 if __name__ == "__main__":
     app = PhotoboothApp()
