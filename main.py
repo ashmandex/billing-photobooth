@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import sys
+import socket
+import threading
+import time
 
 class PhotoboothApp:
     def __init__(self):
@@ -147,6 +150,26 @@ class PhotoboothApp:
         # Track visibility state
         self.additional_options_visible = False
         
+        # Network status indicator box (outside the wrapper_frame)
+        self.network_status_frame = tk.Frame(main_frame, bg='#FFFFFF')
+        self.network_status_frame.pack(pady=(20, 0))
+        
+        self.network_status_box = tk.Label(
+            self.network_status_frame,
+            text="Checking...",
+            font=('Arial', 12, 'bold'),
+            fg='white',
+            bg='#FFA500',  # Orange for initial checking state
+            width=15,
+            height=1,
+            relief='raised',
+            bd=2
+        )
+        self.network_status_box.pack()
+        
+        # Start network monitoring
+        self.start_network_monitoring()
+        
     def qris_login(self):
         print("QRIS login selected")
         # Add your QRIS login logic here
@@ -172,6 +195,52 @@ class PhotoboothApp:
             self.exit_button.pack(pady=10, fill='x')
             self.toggle_button.config(text="Sembunyikan opsi lain")
             self.additional_options_visible = True
+    
+    def check_internet_connection(self):
+        """Check if internet connection is available"""
+        try:
+            # Try to connect to Google's DNS server
+            socket.create_connection(("8.8.8.8", 53), timeout=3)
+            return True
+        except OSError:
+            try:
+                # Fallback: try to connect to Cloudflare DNS
+                socket.create_connection(("1.1.1.1", 53), timeout=3)
+                return True
+            except OSError:
+                return False
+    
+    def update_network_status(self):
+        """Update the network status indicator"""
+        if self.check_internet_connection():
+            # Online - Green background, "Ready" text
+            self.network_status_box.config(
+                text="Ready",
+                bg='#28a745',  # Green
+                fg='white'
+            )
+        else:
+            # Offline - Red background, "Offline" text
+            self.network_status_box.config(
+                text="Offline",
+                bg='#dc3545',  # Red
+                fg='white'
+            )
+    
+    def network_monitor_thread(self):
+        """Background thread to continuously monitor network status"""
+        while True:
+            try:
+                self.update_network_status()
+                time.sleep(2)  # Check every 2 seconds
+            except:
+                # If there's an error, continue monitoring
+                time.sleep(5)
+    
+    def start_network_monitoring(self):
+        """Start the network monitoring in a separate thread"""
+        monitor_thread = threading.Thread(target=self.network_monitor_thread, daemon=True)
+        monitor_thread.start()
         
     def show_password_dialog(self, event=None):
         # Create a custom password dialog with numeric keypad
