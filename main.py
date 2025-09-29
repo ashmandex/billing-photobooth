@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, simpledialog, messagebox
 import sys
 
 class PhotoboothApp:
@@ -21,8 +21,8 @@ class PhotoboothApp:
         # Set background color
         self.root.configure(bg='#FFFFFF')
         
-        # Bind ESC key to exit (for development purposes)
-        self.root.bind('<Escape>', self.exit_app)
+        # Bind Alt+F2 key to exit with password
+        self.root.bind('<Alt-F2>', self.show_password_dialog)
         
     def create_widgets(self):
         # Create main container frame
@@ -94,9 +94,6 @@ class PhotoboothApp:
         )
         card_button.pack(pady=10, fill='x')
         
-        # Exit button (hidden, only accessible via right-click)
-        self.root.bind('<Button-3>', self.show_exit_menu)
-        
     def qris_login(self):
         print("QRIS login selected")
         # Add your QRIS login logic here
@@ -105,14 +102,89 @@ class PhotoboothApp:
         print("Card login selected")
         # Add your card login logic here
         
-    def show_exit_menu(self, event):
-        # Create context menu for exit option
-        context_menu = tk.Menu(self.root, tearoff=0)
-        context_menu.add_command(label="Exit Application", command=self.exit_app)
-        try:
-            context_menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            context_menu.grab_release()
+    def show_password_dialog(self, event=None):
+        # Create a custom password dialog
+        password_window = tk.Toplevel(self.root)
+        password_window.title("Master Password")
+        password_window.geometry("300x150")
+        password_window.configure(bg='#A5DBEB')
+        password_window.resizable(False, False)
+        
+        # Center the dialog
+        password_window.transient(self.root)
+        password_window.grab_set()
+        
+        # Center the window on screen
+        password_window.update_idletasks()
+        x = (password_window.winfo_screenwidth() // 2) - (300 // 2)
+        y = (password_window.winfo_screenheight() // 2) - (150 // 2)
+        password_window.geometry(f"300x150+{x}+{y}")
+        
+        # Password label
+        label = tk.Label(
+            password_window,
+            text="Masukkan kata sandi master:",
+            font=('Arial', 12),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        label.pack(pady=20)
+        
+        # Password entry
+        password_entry = tk.Entry(
+            password_window,
+            font=('Arial', 12),
+            show='*',
+            width=20,
+            justify='center'
+        )
+        password_entry.pack(pady=10)
+        password_entry.focus()
+        
+        # Button frame
+        button_frame = tk.Frame(password_window, bg='#A5DBEB')
+        button_frame.pack(pady=10)
+        
+        def check_password():
+            entered_password = password_entry.get()
+            if entered_password == "282828":
+                password_window.destroy()
+                self.exit_app()
+            else:
+                messagebox.showerror("Error", "Kata sandi salah!")
+                password_entry.delete(0, tk.END)
+                password_entry.focus()
+        
+        def cancel():
+            password_window.destroy()
+        
+        # OK Button
+        ok_button = tk.Button(
+            button_frame,
+            text="OK",
+            font=('Arial', 10),
+            fg='white',
+            bg='#0A3766',
+            command=check_password,
+            padx=20
+        )
+        ok_button.pack(side=tk.LEFT, padx=5)
+        
+        # Cancel Button
+        cancel_button = tk.Button(
+            button_frame,
+            text="Batal",
+            font=('Arial', 10),
+            fg='white',
+            bg='#0A6641',
+            command=cancel,
+            padx=20
+        )
+        cancel_button.pack(side=tk.LEFT, padx=5)
+        
+        # Bind Enter key to check password
+        password_entry.bind('<Return>', lambda e: check_password())
+        password_window.bind('<Escape>', lambda e: cancel())
             
     def exit_app(self, event=None):
         self.root.quit()
