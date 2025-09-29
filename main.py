@@ -286,8 +286,106 @@ class PhotoboothApp:
         threading.Thread(target=self.create_tripay_transaction, daemon=True).start()
     
     def card_login(self):
-        print("Card login selected")
-        # Add your card login logic here
+        """Replace main form with card login form"""
+        print("Card login selected - Creating card form")
+        self.current_view = "card"
+        
+        # Clear the main frame
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        
+        # Create new card login form
+        self.create_card_login_form()
+    
+    def create_card_login_form(self):
+        """Create the card login form interface"""
+        # Create main container frame
+        main_frame = tk.Frame(self.root, bg='#FFFFFF')
+        main_frame.pack(expand=True, fill='both')
+        
+        # Create wrapper frame for the card login (same style as QRIS)
+        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
+        wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Title label
+        title_label = tk.Label(
+            wrapper_frame,
+            text="Masuk Dengan Kartu",
+            font=('Arial', 20, 'bold'),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        title_label.pack(pady=(30, 0))
+        
+        # Instruction label
+        instruction_label = tk.Label(
+            wrapper_frame,
+            text="Masukkan kode kartu Anda:",
+            font=('Arial', 14),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        instruction_label.pack(pady=(5, 20))
+        
+        # Card input container
+        input_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='solid', bd=2)
+        input_frame.pack(pady=20, padx=40)
+        
+        # Card input field
+        self.card_input = tk.Entry(
+            input_frame,
+            font=('Arial', 16),
+            fg='#0A3766',
+            bg='#FFFFFF',
+            width=25,
+            justify='center',
+            relief='flat',
+            bd=0,
+            show='*'
+        )
+        self.card_input.pack(padx=20, pady=20)
+        self.card_input.focus_set()  # Auto-focus on the input field
+        
+        # Bind Enter key to submit
+        self.card_input.bind('<Return>', self.process_card_input)
+        
+        # Instructions
+        instructions_label = tk.Label(
+            wrapper_frame,
+            text="Ketik kode kartu atau tap kartu NFC",
+            font=('Arial', 12),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        instructions_label.pack(pady=10)
+        
+        # Back button (same style as QRIS form)
+        back_button = tk.Button(
+            wrapper_frame,
+            text="Kembali",
+            font=('Arial', 14, 'bold'),
+            fg='#FFFFFF',
+            bg='#DC3545',
+            activebackground='#C82333',
+            activeforeground='#FFFFFF',
+            relief='flat',
+            padx=30,
+            pady=10,
+            command=self.back_to_main
+        )
+        back_button.pack(pady=(20, 30))
+    
+    def process_card_input(self, event=None):
+        """Process the card input when Enter is pressed"""
+        card_code = self.card_input.get().strip()
+        if card_code:
+            print(f"Card code entered: {card_code}")
+            # Here you can add your card validation logic
+            # For now, just show a message
+            messagebox.showinfo("Info", f"Kode kartu: {card_code}")
+            self.card_input.delete(0, tk.END)  # Clear the input
+        else:
+            messagebox.showwarning("Peringatan", "Silakan masukkan kode kartu terlebih dahulu")
         
     def admin_login(self):
         print("Admin login selected")
