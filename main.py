@@ -40,9 +40,9 @@ class PhotoboothApp:
             font=('Arial', 24, 'bold'),
             fg='#0A3766',
             bg='#A5DBEB',
-            pady=20
+            pady=10
         )
-        title_label.pack(pady=(30, 20))
+        title_label.pack(pady=(30, 0))
         
         # Subtitle label
         subtitle_label = tk.Label(
@@ -52,7 +52,7 @@ class PhotoboothApp:
             fg='#0A3766',
             bg='#A5DBEB'
         )
-        subtitle_label.pack(pady=(0, 30))
+        subtitle_label.pack(pady=(5, 20))
         
         # Button frame
         button_frame = tk.Frame(wrapper_frame, bg='#A5DBEB')
