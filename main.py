@@ -89,8 +89,8 @@ class PhotoboothApp:
         button_frame = tk.Frame(wrapper_frame, bg='#A5DBEB')
         button_frame.pack(pady=(0, 30), padx=40)
         
-        # QRIS Button
-        qris_button = tk.Button(
+        # QRIS Button - store reference for enabling/disabling
+        self.qris_button = tk.Button(
             button_frame,
             text="Masuk Pakai QRIS",
             font=('Arial', 18, 'bold'),
@@ -105,10 +105,10 @@ class PhotoboothApp:
             cursor='hand2',
             command=self.qris_login
         )
-        qris_button.pack(pady=10, fill='x')
+        self.qris_button.pack(pady=10, fill='x')
         
-        # Card Button
-        card_button = tk.Button(
+        # Card Button - store reference for enabling/disabling
+        self.card_button = tk.Button(
             button_frame,
             text="Masuk Pakai Kartu",
             font=('Arial', 18, 'bold'),
@@ -123,24 +123,7 @@ class PhotoboothApp:
             cursor='hand2',
             command=self.card_login
         )
-        card_button.pack(pady=10, fill='x')
-        
-        # Admin Button (initially hidden)
-        self.admin_button = tk.Button(
-            button_frame,
-            text="Masuk Via Admin",
-            font=('Arial', 18, 'bold'),
-            fg='white',
-            bg='#1063C2',
-            activebackground='#1063C2',
-            activeforeground='white',
-            relief='flat',
-            bd=0,
-            padx=30,
-            pady=15,
-            cursor='hand2',
-            command=self.admin_login
-        )
+        self.card_button.pack(pady=10, fill='x')
         
         # Exit Button (initially hidden)
         self.exit_button = tk.Button(
@@ -159,7 +142,7 @@ class PhotoboothApp:
             command=self.show_password_dialog
         )
         
-        # Toggle button for additional options
+        # Toggle button for additional options (only shows exit button now)
         self.toggle_button = tk.Button(
             wrapper_frame,
             text="Tampilkan opsi lain",
@@ -178,17 +161,17 @@ class PhotoboothApp:
         # Track visibility state
         self.additional_options_visible = False
         
-        # Network status indicator box (outside the wrapper_frame)
+        # Network status indicator box (outside the wrapper_frame) - made more compact
         self.network_status_frame = tk.Frame(main_frame, bg='#FFFFFF')
         self.network_status_frame.pack(pady=(20, 0))
         
         self.network_status_box = tk.Label(
             self.network_status_frame,
-            text="Checking...",
-            font=('Arial', 12, 'bold'),
+            text="...",
+            font=('Arial', 10, 'bold'),
             fg='white',
             bg='#FFA500',  # Orange for initial checking state
-            width=15,
+            width=8,
             height=1,
             relief='flat',
             bd=0
@@ -200,6 +183,10 @@ class PhotoboothApp:
         
     def qris_login(self):
         """Replace main form with QRIS payment form"""
+        # Check if buttons are disabled (offline)
+        if hasattr(self, 'qris_button') and self.qris_button['state'] == 'disabled':
+            return  # Don't proceed if offline
+        
         print("QRIS login selected - Creating payment form")
         self.current_view = "qris"
         
@@ -288,6 +275,10 @@ class PhotoboothApp:
     
     def card_login(self):
         """Replace main form with card login form"""
+        # Check if buttons are disabled (offline)
+        if hasattr(self, 'card_button') and self.card_button['state'] == 'disabled':
+            return  # Don't proceed if offline
+        
         print("Card login selected - Creating card form")
         self.current_view = "card"
         
@@ -528,14 +519,12 @@ class PhotoboothApp:
         
     def toggle_additional_options(self):
         if self.additional_options_visible:
-            # Hide the buttons
-            self.admin_button.pack_forget()
+            # Hide the exit button
             self.exit_button.pack_forget()
             self.toggle_button.config(text="Tampilkan opsi lain")
             self.additional_options_visible = False
         else:
-            # Show the buttons
-            self.admin_button.pack(pady=10, fill='x')
+            # Show the exit button only
             self.exit_button.pack(pady=10, fill='x')
             self.toggle_button.config(text="Sembunyikan opsi lain")
             self.additional_options_visible = True
@@ -555,20 +544,54 @@ class PhotoboothApp:
                 return False
     
     def update_network_status(self):
-        """Update the network status indicator"""
+        """Update the network status indicator and button states"""
         if self.check_internet_connection():
-            # Online - Green background, "Ready" text
+            # Online - Green background, "OK" text
             self.network_status_box.config(
-                text="Ready",
+                text="OK",
                 bg='#28a745',  # Green
                 fg='white'
             )
+            # Enable buttons when online
+            self.enable_main_buttons()
         else:
-            # Offline - Red background, "Offline" text
+            # Offline - Red background, "OFF" text
             self.network_status_box.config(
-                text="Offline",
+                text="OFF",
                 bg='#dc3545',  # Red
                 fg='white'
+            )
+            # Disable buttons when offline
+            self.disable_main_buttons()
+    
+    def enable_main_buttons(self):
+        """Enable QRIS and Card buttons when online"""
+        if hasattr(self, 'qris_button') and self.qris_button.winfo_exists():
+            self.qris_button.config(
+                state='normal',
+                bg='#0A3766',
+                cursor='hand2'
+            )
+        if hasattr(self, 'card_button') and self.card_button.winfo_exists():
+            self.card_button.config(
+                state='normal',
+                bg='#0A6641',
+                cursor='hand2'
+            )
+    
+    def disable_main_buttons(self):
+        """Disable QRIS and Card buttons when offline"""
+        if hasattr(self, 'qris_button') and self.qris_button.winfo_exists():
+            self.qris_button.config(
+                state='disabled',
+                bg='#666666',
+                cursor='arrow'
+            )
+        if hasattr(self, 'card_button') and self.card_button.winfo_exists():
+            self.card_button.config(
+                state='disabled',
+                bg='#666666',
+                cursor='arrow'
             )
     
     def network_monitor_thread(self):
