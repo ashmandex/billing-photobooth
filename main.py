@@ -782,29 +782,9 @@ class PhotoboothApp:
         main_frame = tk.Frame(self.root, bg='#FFFFFF')
         main_frame.pack(expand=True, fill='both')
         
-        # Create wrapper frame for the success message and button
+        # Create wrapper frame for the button only
         wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
         wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
-        
-        # Success message
-        success_label = tk.Label(
-            wrapper_frame,
-            text="✅ Pembayaran Berhasil!",
-            font=('Arial', 24, 'bold'),
-            fg='#28a745',
-            bg='#A5DBEB'
-        )
-        success_label.pack(pady=(30, 20))
-        
-        # Instructions
-        instruction_label = tk.Label(
-            wrapper_frame,
-            text="Silakan mulai sesi foto Anda",
-            font=('Arial', 16),
-            fg='#0A3766',
-            bg='#A5DBEB'
-        )
-        instruction_label.pack(pady=(0, 30))
         
         # Mulai Foto button (centered)
         start_photo_button = tk.Button(
@@ -822,7 +802,7 @@ class PhotoboothApp:
             cursor='hand2',
             command=self.start_photo_session
         )
-        start_photo_button.pack(pady=(0, 40))
+        start_photo_button.pack(padx=40, pady=40)
     
     def is_dslr_booth_running(self):
         """Check if dslrBooth.exe is running"""
@@ -835,6 +815,33 @@ class PhotoboothApp:
             print(f"Error checking dslrBooth process: {e}")
             return False
     
+    def bring_dslr_booth_to_front(self):
+        """Bring dslrBooth.exe window to front"""
+        try:
+            for process in psutil.process_iter(['pid', 'name']):
+                if process.info['name'] and 'dslrBooth.exe' in process.info['name']:
+                    # Use Windows API to bring window to front
+                    import ctypes
+                    from ctypes import wintypes
+                    
+                    # Get window handle
+                    def enum_windows_proc(hwnd, lParam):
+                        if ctypes.windll.user32.IsWindowVisible(hwnd):
+                            pid = wintypes.DWORD()
+                            ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                            if pid.value == process.info['pid']:
+                                # Bring window to front
+                                ctypes.windll.user32.SetForegroundWindow(hwnd)
+                                ctypes.windll.user32.BringWindowToTop(hwnd)
+                                return False  # Stop enumeration
+                        return True
+                    
+                    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+                    ctypes.windll.user32.EnumWindows(EnumWindowsProc(enum_windows_proc), 0)
+                    break
+        except Exception as e:
+            print(f"Error bringing dslrBooth to front: {e}")
+
     def start_photo_session(self):
         """Start the photo session with dslrBooth integration"""
         # First check if dslrBooth.exe is running
@@ -856,9 +863,12 @@ class PhotoboothApp:
                 result = response.json()
                 
                 if result.get("IsSuccessful"):
-                    # Success - hide main window and show countdown
-                    self.root.withdraw()  # Hide main window
-                    self.show_countdown_window()
+                    # Success - bring dslrBooth to front first
+                    self.bring_dslr_booth_to_front()
+                    
+                    # Small delay to ensure dslrBooth is in front
+                    self.root.after(500, self._hide_and_show_countdown)
+                    
                     # Reset to main form for when countdown ends
                     self.current_view = "main"
                 else:
@@ -884,85 +894,208 @@ class PhotoboothApp:
         except Exception as e:
             messagebox.showerror("Error", f"Terjadi kesalahan: {str(e)}")
     
+    def _hide_and_show_countdown(self):
+        """Helper method to hide main window and show countdown"""
+        # Hide main window
+        self.root.withdraw()
+        # Show countdown window
+        self.show_countdown_window()
+    
     def show_countdown_window(self):
         """Show countdown window for 8 minutes"""
+        print("Creating countdown window...")
+        
         # Create countdown window
-        self.countdown_window = tk.Toplevel()
-        self.countdown_window.title("Sesi Foto Aktif")
-        self.countdown_window.geometry("400x200")
-        self.countdown_window.configure(bg='#A5DBEB')
+        self.countdown_window = tk.Toplevel(self.root)
+        
+        # Make window completely transparent and frameless
+        self.countdown_window.overrideredirect(True)
+        self.countdown_window.attributes('-transparentcolor', 'black')
+        self.countdown_window.configure(bg='black')
+        
+        # Set window size to full screen width but small height
+        screen_width = self.countdown_window.winfo_screenwidth()
+        window_width = screen_width
+        window_height = 60
+        
+        # Position window at top of screen, full width
+        x = 0
+        y = 20  # Position at top of screen
+        self.countdown_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
+        # Make window stay on top
+        self.countdown_window.attributes('-topmost', True)
         self.countdown_window.resizable(False, False)
         
-        # Make window stay on top and center it
-        self.countdown_window.attributes('-topmost', True)
-        self.countdown_window.transient(self.root)
+        # Create a container that will be centered in the full-width window
+        container = tk.Frame(self.countdown_window, bg='black')
+        container.pack(fill='both', expand=True)
         
-        # Center the window at top of screen
-        self.countdown_window.update_idletasks()
-        screen_width = self.countdown_window.winfo_screenwidth()
-        x = (screen_width // 2) - (400 // 2)
-        y = 50  # Position at top of screen
-        self.countdown_window.geometry(f"400x200+{x}+{y}")
+        # Create the actual content frame that will be centered
+        content_frame = tk.Frame(container, bg='black')
+        content_frame.place(relx=0.5, rely=0.5, anchor='center')
         
-        # Prevent window from being moved or closed
-        self.countdown_window.protocol("WM_DELETE_WINDOW", lambda: None)
-        self.countdown_window.overrideredirect(True)
+        # Countdown time with white background - SOLID WHITE
+        time_frame = tk.Frame(content_frame, bg='white', relief='solid', bd=2, highlightbackground='white', highlightthickness=0)
+        time_frame.pack(side='left', padx=(0, 3))
         
-        # Countdown label
-        self.countdown_label = tk.Label(
-            self.countdown_window,
-            text="Sesi Foto Aktif",
-            font=('Arial', 16, 'bold'),
-            fg='#0A3766',
-            bg='#A5DBEB'
-        )
-        self.countdown_label.pack(pady=20)
-        
-        # Time remaining label
         self.time_label = tk.Label(
-            self.countdown_window,
+            time_frame,
             text="08:00",
-            font=('Arial', 24, 'bold'),
-            fg='#DC3545',
-            bg='#A5DBEB'
+            font=('Arial', 16, 'bold'),
+            fg='black',
+            bg='white'
         )
-        self.time_label.pack(pady=10)
+        self.time_label.pack(padx=15, pady=8)
         
-        # Status label
-        status_label = tk.Label(
-            self.countdown_window,
-            text="Silakan ikuti instruksi di aplikasi photobooth",
-            font=('Arial', 12),
-            fg='#0A3766',
-            bg='#A5DBEB'
+        # End session button - SAME HEIGHT AS COUNTDOWN
+        end_session_button = tk.Button(
+            content_frame,
+            text="KELUAR",
+            font=('Arial', 14, 'bold'),
+            fg='white',
+            bg='#DC3545',
+            activebackground='#C82333',
+            activeforeground='white',
+            relief='flat',
+            bd=0,
+            padx=15,
+            pady=8,
+            cursor='hand2',
+            command=self.confirm_end_session
         )
-        status_label.pack(pady=10)
+        end_session_button.pack(side='left')
+        
+        # Force window to appear and update
+        self.countdown_window.update()
+        self.countdown_window.lift()
+        self.countdown_window.attributes('-topmost', True)
+        
+        print("Countdown window created and should be visible")
         
         # Start countdown (8 minutes = 480 seconds)
         self.countdown_seconds = 480
         self.update_countdown()
     
+    def confirm_end_session(self):
+        """Show confirmation dialog for ending session"""
+        # Create confirmation dialog
+        confirm_window = tk.Toplevel(self.countdown_window)
+        confirm_window.title("Konfirmasi Akhiri Sesi")
+        confirm_window.geometry("450x200")
+        confirm_window.configure(bg='#A5DBEB')
+        confirm_window.resizable(False, False)
+        
+        # Center the dialog on screen
+        confirm_window.update_idletasks()
+        x = (confirm_window.winfo_screenwidth() // 2) - (450 // 2)
+        y = (confirm_window.winfo_screenheight() // 2) - (200 // 2)
+        confirm_window.geometry(f"450x200+{x}+{y}")
+        
+        # Make dialog modal and on top
+        confirm_window.transient(self.countdown_window)
+        confirm_window.grab_set()
+        confirm_window.attributes('-topmost', True)
+        
+        # Warning message
+        warning_label = tk.Label(
+            confirm_window,
+            text="Sesi anda akan berakhir ketika melanjutkan ini,\nharap pastikan anda selesai berfoto dan menyimpan hasilnya",
+            font=('Arial', 12),
+            fg='#0A3766',
+            bg='#A5DBEB',
+            justify='center'
+        )
+        warning_label.pack(pady=30)
+        
+        # Button frame
+        button_frame = tk.Frame(confirm_window, bg='#A5DBEB')
+        button_frame.pack(pady=20)
+        
+        # Yes button
+        yes_button = tk.Button(
+            button_frame,
+            text="Iya",
+            font=('Arial', 14, 'bold'),
+            fg='white',
+            bg='#DC3545',
+            activebackground='#C82333',
+            activeforeground='white',
+            relief='raised',
+            bd=2,
+            padx=30,
+            pady=10,
+            cursor='hand2',
+            command=lambda: self.end_session_confirmed(confirm_window)
+        )
+        yes_button.pack(side='left', padx=10)
+        
+        # Cancel button
+        cancel_button = tk.Button(
+            button_frame,
+            text="Batal",
+            font=('Arial', 14, 'bold'),
+            fg='white',
+            bg='#6C757D',
+            activebackground='#5A6268',
+            activeforeground='white',
+            relief='raised',
+            bd=2,
+            padx=30,
+            pady=10,
+            cursor='hand2',
+            command=confirm_window.destroy
+        )
+        cancel_button.pack(side='left', padx=10)
+    
+    def end_session_confirmed(self, confirm_window):
+        """Handle confirmed session termination"""
+        # Close confirmation dialog
+        confirm_window.destroy()
+        
+        # End the countdown and return to main window (same logic as countdown completion)
+        if hasattr(self, 'countdown_window') and self.countdown_window.winfo_exists():
+            self.countdown_window.destroy()
+        
+        # Show main window again
+        self.root.deiconify()
+        
+        # Make main window topmost
+        self.root.lift()
+        self.root.attributes('-topmost', True)
+        self.root.after(100, lambda: self.root.attributes('-topmost', False))
+        
+        # Reset to main form
+        self.back_to_main()
+
     def update_countdown(self):
         """Update countdown timer"""
-        if self.countdown_seconds > 0:
-            # Calculate minutes and seconds
-            minutes = self.countdown_seconds // 60
-            seconds = self.countdown_seconds % 60
-            
-            # Update display
-            time_text = f"{minutes:02d}:{seconds:02d}"
-            self.time_label.config(text=time_text)
-            
-            # Decrease counter
-            self.countdown_seconds -= 1
-            
-            # Schedule next update
-            self.root.after(1000, self.update_countdown)
-        else:
-            # Countdown finished - close countdown window and show main window
-            self.countdown_window.destroy()
-            self.root.deiconify()  # Show main window again
-            self.back_to_main()  # Reset to main form
+        if hasattr(self, 'countdown_window') and self.countdown_window.winfo_exists():
+            if self.countdown_seconds > 0:
+                # Calculate minutes and seconds
+                minutes = self.countdown_seconds // 60
+                seconds = self.countdown_seconds % 60
+                
+                # Update display
+                time_text = f"{minutes:02d}:{seconds:02d}"
+                self.time_label.config(text=time_text)
+                
+                # Decrease counter
+                self.countdown_seconds -= 1
+                
+                # Schedule next update
+                self.root.after(1000, self.update_countdown)
+            else:
+                # Countdown finished - close countdown window and show main window
+                self.countdown_window.destroy()
+                self.root.deiconify()  # Show main window again
+                
+                # Make main window topmost
+                self.root.lift()
+                self.root.attributes('-topmost', True)
+                self.root.after(100, lambda: self.root.attributes('-topmost', False))  # Remove topmost after brief moment
+                
+                self.back_to_main()  # Reset to main form
 
     def show_error(self, message):
         """Show error message and return to main form"""
