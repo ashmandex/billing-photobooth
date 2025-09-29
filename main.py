@@ -299,6 +299,10 @@ class PhotoboothApp:
     
     def create_card_login_form(self):
         """Create the card login form interface"""
+        # Initialize auto-submit timer
+        self.auto_submit_timer = None
+        self.is_processing = False
+        
         # Create main container frame
         main_frame = tk.Frame(self.root, bg='#FFFFFF')
         main_frame.pack(expand=True, fill='both')
@@ -317,15 +321,15 @@ class PhotoboothApp:
         )
         title_label.pack(pady=(30, 0))
         
-        # Instruction label
-        instruction_label = tk.Label(
+        # Status label for feedback
+        self.card_status_label = tk.Label(
             wrapper_frame,
             text="Masukkan kode kartu Anda:",
             font=('Arial', 14),
             fg='#0A3766',
             bg='#A5DBEB'
         )
-        instruction_label.pack(pady=(5, 20))
+        self.card_status_label.pack(pady=(5, 20))
         
         # Card input container
         input_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='solid', bd=2)
@@ -346,7 +350,8 @@ class PhotoboothApp:
         self.card_input.pack(padx=20, pady=20)
         self.card_input.focus_set()  # Auto-focus on the input field
         
-        # Bind Enter key to submit
+        # Bind events for auto-submit functionality
+        self.card_input.bind('<KeyRelease>', self.on_card_input_change)
         self.card_input.bind('<Return>', self.process_card_input)
         
         # Instructions
@@ -375,17 +380,144 @@ class PhotoboothApp:
         )
         back_button.pack(pady=(20, 30))
     
-    def process_card_input(self, event=None):
-        """Process the card input when Enter is pressed"""
+    def on_card_input_change(self, event=None):
+        """Handle card input changes and set auto-submit timer"""
+        if self.is_processing:
+            return
+            
+        # Cancel existing timer
+        if self.auto_submit_timer:
+            self.root.after_cancel(self.auto_submit_timer)
+        
+        # Get current input
         card_code = self.card_input.get().strip()
+        
+        # Only set timer if there's input
         if card_code:
-            print(f"Card code entered: {card_code}")
-            # Here you can add your card validation logic
-            # For now, just show a message
-            messagebox.showinfo("Info", f"Kode kartu: {card_code}")
-            self.card_input.delete(0, tk.END)  # Clear the input
+            # Set new timer for 2 seconds
+            self.auto_submit_timer = self.root.after(2000, self.auto_submit_card)
+    
+    def auto_submit_card(self):
+        """Auto-submit card verification after 2 seconds of inactivity"""
+        if not self.is_processing:
+            self.process_card_input()
+    
+    def process_card_input(self, event=None):
+        """Process the card input when Enter is pressed or auto-submitted"""
+        if self.is_processing:
+            return
+            
+        card_code = self.card_input.get().strip()
+        if not card_code:
+            self.card_status_label.config(text="Silakan masukkan kode kartu terlebih dahulu", fg='#DC3545')
+            return
+        
+        # Check internet connection first
+        if not self.check_internet_connection():
+            self.card_status_label.config(text="Tidak ada koneksi internet", fg='#DC3545')
+            # Return to main form after 2 seconds
+            self.root.after(2000, self.back_to_main)
+            return
+        
+        # Set processing state
+        self.is_processing = True
+        self.card_status_label.config(text="Memverifikasi kartu...", fg='#0A3766')
+        
+        # Clear input immediately after validation
+        self.card_input.delete(0, tk.END)
+        self.card_input.config(state='disabled')
+        
+        # Cancel any pending auto-submit timer
+        if self.auto_submit_timer:
+            self.root.after_cancel(self.auto_submit_timer)
+        
+        # Start verification in background thread
+        threading.Thread(target=self.verify_nfc_card, args=(card_code,), daemon=True).start()
+    
+    def verify_nfc_card(self, card_code):
+        """Verify NFC card with the API"""
+        try:
+            # Prepare API request
+            api_url = "https://card.snapbooth.click/api/nfc-verify"
+            payload = {
+                "haimanis": "LobanGPrMO928UhhhLewaTTT",
+                "kamucantikbanged": card_code
+            }
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            # Make API request
+            response = requests.post(api_url, json=payload, headers=headers, timeout=10)
+            result = response.json()
+            
+            # Update UI in main thread
+            self.root.after(0, self.handle_nfc_verification_response, response.status_code, result)
+            
+        except requests.exceptions.Timeout:
+            self.root.after(0, self.handle_nfc_verification_error, "Timeout - koneksi terlalu lambat")
+        except requests.exceptions.ConnectionError:
+            self.root.after(0, self.handle_nfc_verification_error, "Tidak dapat terhubung ke server")
+        except Exception as e:
+            self.root.after(0, self.handle_nfc_verification_error, f"Error: {str(e)}")
+    
+    def handle_nfc_verification_response(self, status_code, result):
+        """Handle NFC verification API response"""
+        self.is_processing = False
+        
+        if status_code == 200 and result.get('success'):
+            # Success - show success message briefly then go to photo start form
+            self.card_status_label.config(text="Kartu berhasil diverifikasi!", fg='#28a745')
+            # Clear all widgets and show photo start form after 1 second
+            self.root.after(1000, self.show_photo_start_after_card_success)
         else:
-            messagebox.showwarning("Peringatan", "Silakan masukkan kode kartu terlebih dahulu")
+            # Handle different error cases
+            self.card_input.config(state='normal')
+            error_message = result.get('message', 'Terjadi kesalahan')
+            error_code = result.get('error_code', '')
+            
+            if status_code == 404 or error_code == 'NFC_UID_NOT_FOUND':
+                self.card_status_label.config(text="UID kartu NFC tidak ditemukan", fg='#DC3545')
+            elif status_code == 400 or error_code == 'NFC_CARD_DISABLED':
+                self.card_status_label.config(text="Kartu NFC tidak aktif", fg='#DC3545')
+            elif status_code == 401 or error_code == 'INVALID_HAI_MANIS':
+                self.card_status_label.config(text="Autentikasi tidak valid", fg='#DC3545')
+            elif status_code == 500 or error_code == 'INTERNAL_SERVER_ERROR':
+                self.card_status_label.config(text="Terjadi kesalahan server", fg='#DC3545')
+            else:
+                self.card_status_label.config(text=error_message, fg='#DC3545')
+            
+            # Clear input and reset after 3 seconds
+            self.root.after(3000, self.reset_card_form)
+    
+    def show_photo_start_after_card_success(self):
+        """Clear card form and show photo start form"""
+        # Clear all widgets from root
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        
+        # Create photo start form
+        self.create_photo_start_form()
+    
+    def handle_nfc_verification_error(self, error_message):
+        """Handle NFC verification errors"""
+        self.is_processing = False
+        self.card_input.config(state='normal')
+        self.card_status_label.config(text=error_message, fg='#DC3545')
+        
+        # Return to main form after 3 seconds if it's a connection error
+        if "terhubung" in error_message.lower() or "timeout" in error_message.lower():
+            self.root.after(3000, self.back_to_main)
+        else:
+            self.root.after(3000, self.reset_card_form)
+    
+    def reset_card_form(self):
+        """Reset the card form to initial state"""
+        if hasattr(self, 'card_input') and self.card_input.winfo_exists():
+            self.card_input.delete(0, tk.END)
+            self.card_input.focus_set()
+            self.card_status_label.config(text="Masukkan kode kartu Anda:", fg='#0A3766')
+            self.is_processing = False
         
     def admin_login(self):
         print("Admin login selected")
