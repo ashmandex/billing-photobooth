@@ -221,7 +221,7 @@ class PhotoboothApp:
         # Title label
         title_label = tk.Label(
             wrapper_frame,
-            text="Lakukan Pembayaran QRIS Sebesar 30.000",
+            text="Tagihan QRIS 30.000",
             font=('Arial', 20, 'bold'),
             fg='#0A3766',
             bg='#A5DBEB',
@@ -258,7 +258,7 @@ class PhotoboothApp:
         # Payment instructions
         instructions_label = tk.Label(
             wrapper_frame,
-            text="Scan QR Code dengan aplikasi pembayaran Anda",
+            text="Support semua Bank Indonesia",
             font=('Arial', 12),
             fg='#0A3766',
             bg='#A5DBEB'
@@ -658,7 +658,7 @@ class PhotoboothApp:
                 return
             
             # Update status
-            self.qris_status_label.config(text="Scan QR Code untuk melakukan pembayaran")
+            self.qris_status_label.config(text="Scan QR untuk bayar")
             
             # Get QR code URL from transaction data
             qr_url = self.transaction_data.get('qr_url')
