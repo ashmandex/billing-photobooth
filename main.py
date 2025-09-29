@@ -61,7 +61,7 @@ class PhotoboothApp:
         main_frame.pack(expand=True, fill='both')
         
         # Create wrapper frame for the options
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
+        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
         wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
         
         # Title label
@@ -98,8 +98,8 @@ class PhotoboothApp:
             bg='#0A3766',
             activebackground='#0A3766',
             activeforeground='white',
-            relief='raised',
-            bd=3,
+            relief='flat',
+            bd=0,
             padx=30,
             pady=15,
             cursor='hand2',
@@ -116,8 +116,8 @@ class PhotoboothApp:
             bg='#0A6641',
             activebackground='#0A6641',
             activeforeground='white',
-            relief='raised',
-            bd=3,
+            relief='flat',
+            bd=0,
             padx=30,
             pady=15,
             cursor='hand2',
@@ -134,8 +134,8 @@ class PhotoboothApp:
             bg='#1063C2',
             activebackground='#1063C2',
             activeforeground='white',
-            relief='raised',
-            bd=3,
+            relief='flat',
+            bd=0,
             padx=30,
             pady=15,
             cursor='hand2',
@@ -151,8 +151,8 @@ class PhotoboothApp:
             bg='#C22121',
             activebackground='#C22121',
             activeforeground='white',
-            relief='raised',
-            bd=3,
+            relief='flat',
+            bd=0,
             padx=30,
             pady=15,
             cursor='hand2',
@@ -190,8 +190,8 @@ class PhotoboothApp:
             bg='#FFA500',  # Orange for initial checking state
             width=15,
             height=1,
-            relief='raised',
-            bd=2
+            relief='flat',
+            bd=0
         )
         self.network_status_box.pack()
         
@@ -217,7 +217,7 @@ class PhotoboothApp:
         main_frame.pack(expand=True, fill='both')
         
         # Create wrapper frame for the QRIS payment
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
+        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
         wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
         
         # Title label
@@ -241,7 +241,7 @@ class PhotoboothApp:
         self.qris_status_label.pack(pady=(5, 10))
         
         # QR Code container
-        self.qr_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='solid', bd=2)
+        self.qr_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='flat', bd=0)
         self.qr_frame.pack(pady=20, padx=40)
         
         # QR Code placeholder
@@ -276,6 +276,7 @@ class PhotoboothApp:
             activebackground='#C82333',
             activeforeground='#FFFFFF',
             relief='flat',
+            bd=0,
             padx=30,
             pady=10,
             command=self.back_to_main
@@ -308,7 +309,7 @@ class PhotoboothApp:
         main_frame.pack(expand=True, fill='both')
         
         # Create wrapper frame for the card login (same style as QRIS)
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
+        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
         wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
         
         # Title label
@@ -332,7 +333,7 @@ class PhotoboothApp:
         self.card_status_label.pack(pady=(5, 20))
         
         # Card input container
-        input_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='solid', bd=2)
+        input_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='flat', bd=0)
         input_frame.pack(pady=20, padx=40)
         
         # Card input field
@@ -345,7 +346,8 @@ class PhotoboothApp:
             justify='center',
             relief='flat',
             bd=0,
-            show='*'
+            show='*',
+            highlightthickness=0
         )
         self.card_input.pack(padx=20, pady=20)
         self.card_input.focus_set()  # Auto-focus on the input field
@@ -374,6 +376,7 @@ class PhotoboothApp:
             activebackground='#C82333',
             activeforeground='#FFFFFF',
             relief='flat',
+            bd=0,
             padx=30,
             pady=10,
             command=self.back_to_main
@@ -773,7 +776,7 @@ class PhotoboothApp:
                 password_window.destroy()
                 self.exit_app()
             else:
-                messagebox.showerror("Error", "Kata sandi salah!")
+                self.show_custom_error("Error", "Kata sandi salah!")
                 clear_password()
         
         def cancel():
@@ -1013,7 +1016,7 @@ class PhotoboothApp:
         main_frame.pack(expand=True, fill='both')
         
         # Create wrapper frame for the button only
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
+        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
         wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
         
         # Mulai Foto button (centered)
@@ -1025,8 +1028,8 @@ class PhotoboothApp:
             bg='#28a745',
             activebackground='#218838',
             activeforeground='white',
-            relief='raised',
-            bd=3,
+            relief='flat',
+            bd=0,
             padx=50,
             pady=20,
             cursor='hand2',
@@ -1076,7 +1079,7 @@ class PhotoboothApp:
         """Start the photo session with dslrBooth integration"""
         # First check if dslrBooth.exe is running
         if not self.is_dslr_booth_running():
-            messagebox.showerror(
+            self.show_custom_error(
                 "Aplikasi Photobooth Tidak Aktif",
                 "Harap jalankan aplikasi dslrBooth.exe terlebih dahulu sebelum memulai sesi foto."
             )
@@ -1105,24 +1108,24 @@ class PhotoboothApp:
                     # API returned error
                     error_msg = result.get("ErrorMessage", "Unknown error")
                     if "not on the start screen" in error_msg:
-                        messagebox.showerror(
+                        self.show_custom_error(
                             "Aplikasi Photobooth Tidak Siap",
                             "Harap minta tolong staff untuk memeriksa Aplikasi Photobooth sudah di dalam Event atau sudah terjalankan sebelumnya"
                         )
                     else:
-                        messagebox.showerror("Error", f"Gagal memulai sesi foto: {error_msg}")
+                        self.show_custom_error("Error", f"Gagal memulai sesi foto: {error_msg}")
             else:
-                messagebox.showerror("Error", f"Gagal terhubung ke aplikasi photobooth (HTTP {response.status_code})")
+                self.show_custom_error("Error", f"Gagal terhubung ke aplikasi photobooth (HTTP {response.status_code})")
                 
         except requests.exceptions.ConnectionError:
-            messagebox.showerror(
+            self.show_custom_error(
                 "Koneksi Gagal",
                 "Tidak dapat terhubung ke aplikasi photobooth. Pastikan aplikasi dslrBooth.exe sudah berjalan."
             )
         except requests.exceptions.Timeout:
-            messagebox.showerror("Timeout", "Koneksi ke aplikasi photobooth timeout.")
+            self.show_custom_error("Timeout", "Koneksi ke aplikasi photobooth timeout.")
         except Exception as e:
-            messagebox.showerror("Error", f"Terjadi kesalahan: {str(e)}")
+            self.show_custom_error("Error", f"Terjadi kesalahan: {str(e)}")
     
     def _hide_and_show_countdown(self):
         """Helper method to hide main window and show countdown"""
@@ -1326,6 +1329,75 @@ class PhotoboothApp:
                 self.root.after(100, lambda: self.root.attributes('-topmost', False))  # Remove topmost after brief moment
                 
                 self.back_to_main()  # Reset to main form
+
+    def show_custom_error(self, title, message):
+        """Show custom error dialog with modern styling"""
+        # Create error dialog window
+        error_window = tk.Toplevel(self.root)
+        error_window.title(title)
+        error_window.geometry("400x200")
+        error_window.resizable(False, False)
+        error_window.configure(bg='#FFFFFF')
+        error_window.transient(self.root)
+        error_window.grab_set()
+        
+        # Center the window
+        error_window.geometry("+{}+{}".format(
+            int(error_window.winfo_screenwidth()/2 - 200),
+            int(error_window.winfo_screenheight()/2 - 100)
+        ))
+        
+        # Main container
+        main_frame = tk.Frame(error_window, bg='#FFFFFF', relief='flat', bd=0)
+        main_frame.pack(expand=True, fill='both', padx=20, pady=20)
+        
+        # Title label
+        title_label = tk.Label(
+            main_frame,
+            text=title,
+            font=('Arial', 16, 'bold'),
+            fg='#DC3545',
+            bg='#FFFFFF'
+        )
+        title_label.pack(pady=(0, 10))
+        
+        # Message label
+        message_label = tk.Label(
+            main_frame,
+            text=message,
+            font=('Arial', 12),
+            fg='#0A3766',
+            bg='#FFFFFF',
+            wraplength=350,
+            justify='center'
+        )
+        message_label.pack(pady=(0, 20))
+        
+        # OK button
+        ok_button = tk.Button(
+            main_frame,
+            text="OK",
+            font=('Arial', 12, 'bold'),
+            fg='#FFFFFF',
+            bg='#DC3545',
+            activebackground='#C82333',
+            activeforeground='#FFFFFF',
+            relief='flat',
+            bd=0,
+            padx=30,
+            pady=8,
+            cursor='hand2',
+            command=error_window.destroy
+        )
+        ok_button.pack()
+        
+        # Focus on OK button and bind Enter key
+        ok_button.focus_set()
+        error_window.bind('<Return>', lambda e: error_window.destroy())
+        error_window.bind('<Escape>', lambda e: error_window.destroy())
+        
+        # Wait for window to close
+        error_window.wait_window()
 
     def show_error(self, message):
         """Show error message and return to main form"""
