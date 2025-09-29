@@ -12,6 +12,8 @@ from datetime import datetime
 from PIL import Image, ImageTk
 import io
 import base64
+import subprocess
+import psutil
 
 class PhotoboothApp:
     def __init__(self):
@@ -762,47 +764,206 @@ class PhotoboothApp:
         self.root.after(2000, self.back_to_main)  # Return to main after 2 seconds
     
     def payment_success(self):
-        """Handle successful payment - hide QR code and show 'Mulai Foto' button"""
+        """Handle successful payment - show new form with 'Mulai Foto' button"""
         # Stop monitoring thread
         if hasattr(self, 'monitoring') and self.monitoring:
             self.monitoring = False
         
-        # Hide QR code
-        if hasattr(self, 'qr_label'):
-            self.qr_label.pack_forget()
+        # Clear all widgets from root
+        for widget in self.root.winfo_children():
+            widget.destroy()
         
-        # Update status
-        self.qris_status_label.config(
+        # Create new payment success form
+        self.create_photo_start_form()
+    
+    def create_photo_start_form(self):
+        """Create form with centered 'Mulai Foto' button"""
+        # Create main container frame
+        main_frame = tk.Frame(self.root, bg='#FFFFFF')
+        main_frame.pack(expand=True, fill='both')
+        
+        # Create wrapper frame for the success message and button
+        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='raised', bd=3)
+        wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Success message
+        success_label = tk.Label(
+            wrapper_frame,
             text="✅ Pembayaran Berhasil!",
-            fg="#28a745",
-            font=("Arial", 14, "bold")
+            font=('Arial', 24, 'bold'),
+            fg='#28a745',
+            bg='#A5DBEB'
         )
+        success_label.pack(pady=(30, 20))
         
-        # Hide payment instructions
-        if hasattr(self, 'qris_instructions_label'):
-            self.qris_instructions_label.pack_forget()
+        # Instructions
+        instruction_label = tk.Label(
+            wrapper_frame,
+            text="Silakan mulai sesi foto Anda",
+            font=('Arial', 16),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        instruction_label.pack(pady=(0, 30))
         
-        # Create 'Mulai Foto' button
-        self.start_photo_button = tk.Button(
-            self.qris_wrapper_frame,
+        # Mulai Foto button (centered)
+        start_photo_button = tk.Button(
+            wrapper_frame,
             text="Mulai Foto",
-            font=("Arial", 16, "bold"),
-            bg="#28a745",
-            fg="white",
-            padx=40,
-            pady=15,
-            command=self.start_photo_session,
-            cursor="hand2"
+            font=('Arial', 20, 'bold'),
+            fg='white',
+            bg='#28a745',
+            activebackground='#218838',
+            activeforeground='white',
+            relief='raised',
+            bd=3,
+            padx=50,
+            pady=20,
+            cursor='hand2',
+            command=self.start_photo_session
         )
-        self.start_photo_button.pack(pady=20)
+        start_photo_button.pack(pady=(0, 40))
+    
+    def is_dslr_booth_running(self):
+        """Check if dslrBooth.exe is running"""
+        try:
+            for process in psutil.process_iter(['pid', 'name']):
+                if process.info['name'] and 'dslrBooth.exe' in process.info['name']:
+                    return True
+            return False
+        except Exception as e:
+            print(f"Error checking dslrBooth process: {e}")
+            return False
     
     def start_photo_session(self):
-        """Start the photo session"""
-        # For now, just show a message - you can implement actual photo logic here
-        messagebox.showinfo("Photobooth", "Memulai sesi foto!\n\nFitur ini akan diimplementasikan selanjutnya.")
-        # After photo session, return to main
-        self.back_to_main()
+        """Start the photo session with dslrBooth integration"""
+        # First check if dslrBooth.exe is running
+        if not self.is_dslr_booth_running():
+            messagebox.showerror(
+                "Aplikasi Photobooth Tidak Aktif",
+                "Harap jalankan aplikasi dslrBooth.exe terlebih dahulu sebelum memulai sesi foto."
+            )
+            return
+        
+        # Call the API to start photo session
+        try:
+            response = requests.get(
+                "http://localhost:1500/api/start?mode=print&password=JVKDAWKr1SnmWqHv",
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                if result.get("IsSuccessful"):
+                    # Success - hide main window and show countdown
+                    self.root.withdraw()  # Hide main window
+                    self.show_countdown_window()
+                    # Reset to main form for when countdown ends
+                    self.current_view = "main"
+                else:
+                    # API returned error
+                    error_msg = result.get("ErrorMessage", "Unknown error")
+                    if "not on the start screen" in error_msg:
+                        messagebox.showerror(
+                            "Aplikasi Photobooth Tidak Siap",
+                            "Harap minta tolong staff untuk memeriksa Aplikasi Photobooth sudah di dalam Event atau sudah terjalankan sebelumnya"
+                        )
+                    else:
+                        messagebox.showerror("Error", f"Gagal memulai sesi foto: {error_msg}")
+            else:
+                messagebox.showerror("Error", f"Gagal terhubung ke aplikasi photobooth (HTTP {response.status_code})")
+                
+        except requests.exceptions.ConnectionError:
+            messagebox.showerror(
+                "Koneksi Gagal",
+                "Tidak dapat terhubung ke aplikasi photobooth. Pastikan aplikasi dslrBooth.exe sudah berjalan."
+            )
+        except requests.exceptions.Timeout:
+            messagebox.showerror("Timeout", "Koneksi ke aplikasi photobooth timeout.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Terjadi kesalahan: {str(e)}")
     
+    def show_countdown_window(self):
+        """Show countdown window for 8 minutes"""
+        # Create countdown window
+        self.countdown_window = tk.Toplevel()
+        self.countdown_window.title("Sesi Foto Aktif")
+        self.countdown_window.geometry("400x200")
+        self.countdown_window.configure(bg='#A5DBEB')
+        self.countdown_window.resizable(False, False)
+        
+        # Make window stay on top and center it
+        self.countdown_window.attributes('-topmost', True)
+        self.countdown_window.transient(self.root)
+        
+        # Center the window at top of screen
+        self.countdown_window.update_idletasks()
+        screen_width = self.countdown_window.winfo_screenwidth()
+        x = (screen_width // 2) - (400 // 2)
+        y = 50  # Position at top of screen
+        self.countdown_window.geometry(f"400x200+{x}+{y}")
+        
+        # Prevent window from being moved or closed
+        self.countdown_window.protocol("WM_DELETE_WINDOW", lambda: None)
+        self.countdown_window.overrideredirect(True)
+        
+        # Countdown label
+        self.countdown_label = tk.Label(
+            self.countdown_window,
+            text="Sesi Foto Aktif",
+            font=('Arial', 16, 'bold'),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        self.countdown_label.pack(pady=20)
+        
+        # Time remaining label
+        self.time_label = tk.Label(
+            self.countdown_window,
+            text="08:00",
+            font=('Arial', 24, 'bold'),
+            fg='#DC3545',
+            bg='#A5DBEB'
+        )
+        self.time_label.pack(pady=10)
+        
+        # Status label
+        status_label = tk.Label(
+            self.countdown_window,
+            text="Silakan ikuti instruksi di aplikasi photobooth",
+            font=('Arial', 12),
+            fg='#0A3766',
+            bg='#A5DBEB'
+        )
+        status_label.pack(pady=10)
+        
+        # Start countdown (8 minutes = 480 seconds)
+        self.countdown_seconds = 480
+        self.update_countdown()
+    
+    def update_countdown(self):
+        """Update countdown timer"""
+        if self.countdown_seconds > 0:
+            # Calculate minutes and seconds
+            minutes = self.countdown_seconds // 60
+            seconds = self.countdown_seconds % 60
+            
+            # Update display
+            time_text = f"{minutes:02d}:{seconds:02d}"
+            self.time_label.config(text=time_text)
+            
+            # Decrease counter
+            self.countdown_seconds -= 1
+            
+            # Schedule next update
+            self.root.after(1000, self.update_countdown)
+        else:
+            # Countdown finished - close countdown window and show main window
+            self.countdown_window.destroy()
+            self.root.deiconify()  # Show main window again
+            self.back_to_main()  # Reset to main form
+
     def show_error(self, message):
         """Show error message and return to main form"""
         self.qris_status_label.config(text=f"❌ {message}", fg='#dc3545')
