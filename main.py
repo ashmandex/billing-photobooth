@@ -583,7 +583,7 @@ class PhotoboothApp:
             
             # Prepare transaction data for PHP forwarder
             payload_data = {
-                "amount": 30000,
+                "amount": 1000,
                 "customerDetails": {
                     "first_name": "Customer Photobooth",
                     "email": "customer@photobooth.com",
