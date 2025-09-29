@@ -103,10 +103,10 @@ class PhotoboothApp:
         # Add your card login logic here
         
     def show_password_dialog(self, event=None):
-        # Create a custom password dialog
+        # Create a custom password dialog with numeric keypad
         password_window = tk.Toplevel(self.root)
         password_window.title("Master Password")
-        password_window.geometry("300x150")
+        password_window.geometry("500x750")
         password_window.configure(bg='#A5DBEB')
         password_window.resizable(False, False)
         
@@ -116,75 +116,187 @@ class PhotoboothApp:
         
         # Center the window on screen
         password_window.update_idletasks()
-        x = (password_window.winfo_screenwidth() // 2) - (300 // 2)
-        y = (password_window.winfo_screenheight() // 2) - (150 // 2)
-        password_window.geometry(f"300x150+{x}+{y}")
+        x = (password_window.winfo_screenwidth() // 2) - (500 // 2)
+        y = (password_window.winfo_screenheight() // 2) - (650 // 2)
+        password_window.geometry(f"500x650+{x}+{y}")
         
         # Password label
         label = tk.Label(
             password_window,
             text="Masukkan kata sandi master:",
-            font=('Arial', 12),
+            font=('Arial', 14, 'bold'),
             fg='#0A3766',
             bg='#A5DBEB'
         )
         label.pack(pady=20)
         
-        # Password entry
-        password_entry = tk.Entry(
-            password_window,
-            font=('Arial', 12),
-            show='*',
-            width=20,
-            justify='center'
-        )
-        password_entry.pack(pady=10)
-        password_entry.focus()
+        # Password display (shows asterisks)
+        self.password_var = tk.StringVar()
+        self.entered_password = ""
         
-        # Button frame
-        button_frame = tk.Frame(password_window, bg='#A5DBEB')
-        button_frame.pack(pady=10)
+        password_display = tk.Label(
+            password_window,
+            textvariable=self.password_var,
+            font=('Arial', 18, 'bold'),
+            fg='#0A3766',
+            bg='white',
+            width=15,
+            height=2,
+            relief='sunken',
+            bd=2
+        )
+        password_display.pack(pady=10)
+        
+        # Keypad frame
+        keypad_frame = tk.Frame(password_window, bg='#A5DBEB')
+        keypad_frame.pack(pady=20)
+        
+        # Function to add number to password
+        def add_number(num):
+            if len(self.entered_password) < 6:  # Limit password length to 6 digits
+                self.entered_password += str(num)
+                self.password_var.set('*' * len(self.entered_password))
+                # Auto-submit when 6 digits are entered
+                if len(self.entered_password) == 6:
+                    check_password()
+        
+        # Function to clear password
+        def clear_password():
+            self.entered_password = ""
+            self.password_var.set("")
+        
+        # Function to backspace
+        def backspace():
+            if self.entered_password:
+                self.entered_password = self.entered_password[:-1]
+                self.password_var.set('*' * len(self.entered_password))
+        
+        # Create number buttons (1-9) in proper phone layout
+        # Row 1: 1, 2, 3
+        row1_frame = tk.Frame(keypad_frame, bg='#A5DBEB')
+        row1_frame.pack(pady=5)
+        for num in [1, 2, 3]:
+            btn = tk.Button(
+                row1_frame,
+                text=str(num),
+                font=('Arial', 20, 'bold'),
+                fg='white',
+                bg='#0A3766',
+                activebackground='#2980b9',
+                activeforeground='white',
+                width=5,
+                height=2,
+                relief='raised',
+                bd=3,
+                command=lambda n=num: add_number(n)
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+        
+        # Row 2: 4, 5, 6
+        row2_frame = tk.Frame(keypad_frame, bg='#A5DBEB')
+        row2_frame.pack(pady=5)
+        for num in [4, 5, 6]:
+            btn = tk.Button(
+                row2_frame,
+                text=str(num),
+                font=('Arial', 20, 'bold'),
+                fg='white',
+                bg='#0A3766',
+                activebackground='#2980b9',
+                activeforeground='white',
+                width=5,
+                height=2,
+                relief='raised',
+                bd=3,
+                command=lambda n=num: add_number(n)
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+        
+        # Row 3: 7, 8, 9
+        row3_frame = tk.Frame(keypad_frame, bg='#A5DBEB')
+        row3_frame.pack(pady=5)
+        for num in [7, 8, 9]:
+            btn = tk.Button(
+                row3_frame,
+                text=str(num),
+                font=('Arial', 20, 'bold'),
+                fg='white',
+                bg='#0A3766',
+                activebackground='#2980b9',
+                activeforeground='white',
+                width=5,
+                height=2,
+                relief='raised',
+                bd=3,
+                command=lambda n=num: add_number(n)
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+        
+        # Row 4: Clear, 0, Backspace
+        row4_frame = tk.Frame(keypad_frame, bg='#A5DBEB')
+        row4_frame.pack(pady=5)
+        
+        # Clear button
+        clear_btn = tk.Button(
+            row4_frame,
+            text="Clear",
+            font=('Arial', 14, 'bold'),
+            fg='white',
+            bg='#e74c3c',
+            activebackground='#c0392b',
+            activeforeground='white',
+            width=5,
+            height=2,
+            relief='raised',
+            bd=3,
+            command=clear_password
+        )
+        clear_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Zero button
+        zero_btn = tk.Button(
+            row4_frame,
+            text="0",
+            font=('Arial', 20, 'bold'),
+            fg='white',
+            bg='#0A3766',
+            activebackground='#2980b9',
+            activeforeground='white',
+            width=5,
+            height=2,
+            relief='raised',
+            bd=3,
+            command=lambda: add_number(0)
+        )
+        zero_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Backspace button
+        back_btn = tk.Button(
+            row4_frame,
+            text="Hapus",
+            font=('Arial', 14, 'bold'),
+            fg='white',
+            bg='#f39c12',
+            activebackground='#e67e22',
+            activeforeground='white',
+            width=5,
+            height=2,
+            relief='raised',
+            bd=3,
+            command=backspace
+        )
+        back_btn.pack(side=tk.LEFT, padx=5)
         
         def check_password():
-            entered_password = password_entry.get()
-            if entered_password == "282828":
+            if self.entered_password == "282828":
                 password_window.destroy()
                 self.exit_app()
             else:
                 messagebox.showerror("Error", "Kata sandi salah!")
-                password_entry.delete(0, tk.END)
-                password_entry.focus()
+                clear_password()
         
         def cancel():
             password_window.destroy()
-        
-        # OK Button
-        ok_button = tk.Button(
-            button_frame,
-            text="OK",
-            font=('Arial', 10),
-            fg='white',
-            bg='#0A3766',
-            command=check_password,
-            padx=20
-        )
-        ok_button.pack(side=tk.LEFT, padx=5)
-        
-        # Cancel Button
-        cancel_button = tk.Button(
-            button_frame,
-            text="Batal",
-            font=('Arial', 10),
-            fg='white',
-            bg='#0A6641',
-            command=cancel,
-            padx=20
-        )
-        cancel_button.pack(side=tk.LEFT, padx=5)
-        
-        # Bind Enter key to check password
-        password_entry.bind('<Return>', lambda e: check_password())
-        password_window.bind('<Escape>', lambda e: cancel())
             
     def exit_app(self, event=None):
         self.root.quit()
