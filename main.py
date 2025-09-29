@@ -224,10 +224,9 @@ class PhotoboothApp:
             text="Tagihan QRIS 30.000",
             font=('Arial', 20, 'bold'),
             fg='#0A3766',
-            bg='#A5DBEB',
-            pady=15
+            bg='#A5DBEB'
         )
-        title_label.pack(pady=(30, 20))
+        title_label.pack(pady=(30, 0))
         
         # Status label
         self.qris_status_label = tk.Label(
@@ -237,7 +236,7 @@ class PhotoboothApp:
             fg='#0A3766',
             bg='#A5DBEB'
         )
-        self.qris_status_label.pack(pady=10)
+        self.qris_status_label.pack(pady=(5, 10))
         
         # QR Code container
         self.qr_frame = tk.Frame(wrapper_frame, bg='#FFFFFF', relief='solid', bd=2)
