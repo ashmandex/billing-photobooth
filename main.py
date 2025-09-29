@@ -960,7 +960,7 @@ class PhotoboothApp:
             relief='flat',
             bd=0,
             padx=15,
-            pady=8,
+            pady=7,
             cursor='hand2',
             command=self.confirm_end_session
         )
