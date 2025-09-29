@@ -94,8 +94,8 @@ class PhotoboothApp:
         )
         card_button.pack(pady=10, fill='x')
         
-        # Admin Button
-        admin_button = tk.Button(
+        # Admin Button (initially hidden)
+        self.admin_button = tk.Button(
             button_frame,
             text="Masuk Via Admin",
             font=('Arial', 18, 'bold'),
@@ -110,10 +110,9 @@ class PhotoboothApp:
             cursor='hand2',
             command=self.admin_login
         )
-        admin_button.pack(pady=10, fill='x')
         
-        # Exit Button
-        exit_button = tk.Button(
+        # Exit Button (initially hidden)
+        self.exit_button = tk.Button(
             button_frame,
             text="Keluar Aplikasi",
             font=('Arial', 18, 'bold'),
@@ -128,7 +127,25 @@ class PhotoboothApp:
             cursor='hand2',
             command=self.show_password_dialog
         )
-        exit_button.pack(pady=10, fill='x')
+        
+        # Toggle button for additional options
+        self.toggle_button = tk.Button(
+            wrapper_frame,
+            text="Tampilkan opsi lain",
+            font=('Arial', 14),
+            fg='#0A3766',
+            bg='#A5DBEB',
+            activebackground='#A5DBEB',
+            activeforeground='#0A3766',
+            relief='flat',
+            bd=0,
+            cursor='hand2',
+            command=self.toggle_additional_options
+        )
+        self.toggle_button.pack(pady=(10, 20))
+        
+        # Track visibility state
+        self.additional_options_visible = False
         
     def qris_login(self):
         print("QRIS login selected")
@@ -141,6 +158,20 @@ class PhotoboothApp:
     def admin_login(self):
         print("Admin login selected")
         # Add your admin login logic here
+        
+    def toggle_additional_options(self):
+        if self.additional_options_visible:
+            # Hide the buttons
+            self.admin_button.pack_forget()
+            self.exit_button.pack_forget()
+            self.toggle_button.config(text="Tampilkan opsi lain")
+            self.additional_options_visible = False
+        else:
+            # Show the buttons
+            self.admin_button.pack(pady=10, fill='x')
+            self.exit_button.pack(pady=10, fill='x')
+            self.toggle_button.config(text="Sembunyikan opsi lain")
+            self.additional_options_visible = True
         
     def show_password_dialog(self, event=None):
         # Create a custom password dialog with numeric keypad
