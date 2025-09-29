@@ -94,6 +94,42 @@ class PhotoboothApp:
         )
         card_button.pack(pady=10, fill='x')
         
+        # Admin Button
+        admin_button = tk.Button(
+            button_frame,
+            text="Masuk Via Admin",
+            font=('Arial', 18, 'bold'),
+            fg='white',
+            bg='#1063C2',
+            activebackground='#1063C2',
+            activeforeground='white',
+            relief='raised',
+            bd=3,
+            padx=30,
+            pady=15,
+            cursor='hand2',
+            command=self.admin_login
+        )
+        admin_button.pack(pady=10, fill='x')
+        
+        # Exit Button
+        exit_button = tk.Button(
+            button_frame,
+            text="Keluar Aplikasi",
+            font=('Arial', 18, 'bold'),
+            fg='white',
+            bg='#C22121',
+            activebackground='#C22121',
+            activeforeground='white',
+            relief='raised',
+            bd=3,
+            padx=30,
+            pady=15,
+            cursor='hand2',
+            command=self.show_password_dialog
+        )
+        exit_button.pack(pady=10, fill='x')
+        
     def qris_login(self):
         print("QRIS login selected")
         # Add your QRIS login logic here
@@ -101,6 +137,10 @@ class PhotoboothApp:
     def card_login(self):
         print("Card login selected")
         # Add your card login logic here
+        
+    def admin_login(self):
+        print("Admin login selected")
+        # Add your admin login logic here
         
     def show_password_dialog(self, event=None):
         # Create a custom password dialog with numeric keypad
