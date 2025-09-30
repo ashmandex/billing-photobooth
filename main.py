@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox
+from tkinter import ttk, simpledialog, messagebox, font
 import sys
 import socket
 import threading
@@ -14,6 +14,7 @@ import io
 import base64
 import subprocess
 import psutil
+import os
 
 class PhotoboothApp:
     def __init__(self):
@@ -36,8 +37,44 @@ class PhotoboothApp:
         self.payment_status_thread = None
         
         self.root = tk.Tk()
+        self.load_custom_font()
         self.setup_window()
         self.create_widgets()
+        
+    def load_custom_font(self):
+        """Load Satoshi font from the Fonts directory"""
+        try:
+            # Get the path to the font file
+            font_path = os.path.join(os.path.dirname(__file__), "Fonts", "TTF", "Satoshi-Variable.ttf")
+            
+            if os.path.exists(font_path):
+                # Register the font with tkinter
+                self.custom_font_family = "Satoshi"
+                
+                # Create font objects for different sizes and weights
+                self.font_large = font.Font(family=self.custom_font_family, size=24, weight="bold")
+                self.font_medium = font.Font(family=self.custom_font_family, size=16, weight="normal")
+                self.font_small = font.Font(family=self.custom_font_family, size=12, weight="normal")
+                self.font_button = font.Font(family=self.custom_font_family, size=14, weight="bold")
+                
+                print(f"Loaded custom font: {font_path}")
+            else:
+                print(f"Font file not found: {font_path}")
+                # Fallback to system fonts
+                self.custom_font_family = "Arial"
+                self.font_large = font.Font(family="Arial", size=24, weight="bold")
+                self.font_medium = font.Font(family="Arial", size=16, weight="normal")
+                self.font_small = font.Font(family="Arial", size=12, weight="normal")
+                self.font_button = font.Font(family="Arial", size=14, weight="bold")
+                
+        except Exception as e:
+            print(f"Error loading custom font: {e}")
+            # Fallback to system fonts
+            self.custom_font_family = "Arial"
+            self.font_large = font.Font(family="Arial", size=24, weight="bold")
+            self.font_medium = font.Font(family="Arial", size=16, weight="normal")
+            self.font_small = font.Font(family="Arial", size=12, weight="normal")
+            self.font_button = font.Font(family="Arial", size=14, weight="bold")
         
     def setup_window(self):
         # Set window title
@@ -49,26 +86,41 @@ class PhotoboothApp:
         # Disable window controls (minimize, maximize, close)
         self.root.overrideredirect(True)
         
-        # Set background color
-        self.root.configure(bg='#FFFFFF')
+        # Set background color to match the CSS design
+        self.root.configure(bg='#e6f5ec')
         
         # Bind Alt+F2 key to exit with password
         self.root.bind('<Alt-F2>', self.show_password_dialog)
         
     def create_widgets(self):
-        # Create main container frame
-        main_frame = tk.Frame(self.root, bg='#FFFFFF')
+        # Create main container frame with dotted pattern background
+        main_frame = tk.Frame(self.root, bg='#e6f5ec')
         main_frame.pack(expand=True, fill='both')
         
-        # Create wrapper frame for the options
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
-        wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
+        # Create a canvas for the dotted pattern background
+        self.bg_canvas = tk.Canvas(main_frame, bg='#e6f5ec', highlightthickness=0)
+        self.bg_canvas.pack(expand=True, fill='both')
+        
+        # Draw the dotted pattern
+        self.draw_dotted_pattern()
+        
+        # Create wrapper frame for the options on top of canvas
+        wrapper_frame = tk.Frame(self.bg_canvas, bg='#A5DBEB', relief='flat', bd=0)
+        self.bg_canvas.create_window(
+            self.bg_canvas.winfo_reqwidth() // 2,
+            self.bg_canvas.winfo_reqheight() // 2,
+            window=wrapper_frame,
+            anchor='center'
+        )
+        
+        # Bind canvas resize to redraw pattern and reposition wrapper
+        self.bg_canvas.bind('<Configure>', self.on_canvas_configure)
         
         # Title label
         title_label = tk.Label(
             wrapper_frame,
             text="SELAMAT DATANG",
-            font=('Arial', 24, 'bold'),
+            font=self.font_large,
             fg='#0A3766',
             bg='#A5DBEB',
             pady=10
@@ -79,7 +131,7 @@ class PhotoboothApp:
         subtitle_label = tk.Label(
             wrapper_frame,
             text="Pilih metode untuk masuk:",
-            font=('Arial', 16),
+            font=self.font_medium,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -93,7 +145,7 @@ class PhotoboothApp:
         self.qris_button = tk.Button(
             button_frame,
             text="Masuk Pakai QRIS",
-            font=('Arial', 18, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#0A3766',
             activebackground='#0A3766',
@@ -111,7 +163,7 @@ class PhotoboothApp:
         self.card_button = tk.Button(
             button_frame,
             text="Masuk Pakai Kartu",
-            font=('Arial', 18, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#0A6641',
             activebackground='#0A6641',
@@ -129,7 +181,7 @@ class PhotoboothApp:
         self.exit_button = tk.Button(
             button_frame,
             text="Keluar Aplikasi",
-            font=('Arial', 18, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#C22121',
             activebackground='#C22121',
@@ -146,7 +198,7 @@ class PhotoboothApp:
         self.toggle_button = tk.Button(
             wrapper_frame,
             text="Tampilkan opsi lain",
-            font=('Arial', 14),
+            font=self.font_small,
             fg='#0A3766',
             bg='#A5DBEB',
             activebackground='#A5DBEB',
@@ -156,30 +208,124 @@ class PhotoboothApp:
             cursor='hand2',
             command=self.toggle_additional_options
         )
-        self.toggle_button.pack(pady=(10, 20))
+        self.toggle_button.pack(pady=(0, 20))
         
         # Track visibility state
         self.additional_options_visible = False
         
-        # Network status indicator box (outside the wrapper_frame) - made more compact
-        self.network_status_frame = tk.Frame(main_frame, bg='#FFFFFF')
-        self.network_status_frame.pack(pady=(20, 0))
+        # Create overlay with main-img.png on main form
+        self.create_main_overlay(self.bg_canvas)
         
-        self.network_status_box = tk.Label(
-            self.network_status_frame,
-            text="...",
-            font=('Arial', 10, 'bold'),
-            fg='white',
-            bg='#FFA500',  # Orange for initial checking state
-            width=8,
-            height=1,
-            relief='flat',
-            bd=0
-        )
-        self.network_status_box.pack()
-        
-        # Start network monitoring
+        # Start network monitoring (for button state management only)
         self.start_network_monitoring()
+    
+    def create_main_overlay(self, canvas):
+        """Create overlay with main-img.png for main welcome form"""
+        try:
+            # Load the overlay image
+            img_path = os.path.join(os.path.dirname(__file__), "main-img.png")
+            if os.path.exists(img_path):
+                # Load and resize image
+                pil_image = Image.open(img_path)
+                
+                # Convert to RGBA to preserve transparency
+                if pil_image.mode != 'RGBA':
+                    pil_image = pil_image.convert('RGBA')
+                
+                # Resize to fit screen while maintaining aspect ratio
+                screen_width = self.root.winfo_screenwidth()
+                screen_height = self.root.winfo_screenheight()
+                
+                # Calculate size (make it cover most of the screen)
+                max_width = int(screen_width * 0.8)
+                max_height = int(screen_height * 0.8)
+                
+                pil_image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                self.main_overlay_image = ImageTk.PhotoImage(pil_image)
+                
+                # Create overlay label directly on canvas (no frame background)
+                image_label = tk.Label(
+                    canvas,
+                    image=self.main_overlay_image,
+                    cursor='hand2',
+                    bd=0,
+                    highlightthickness=0
+                )
+                
+                # Bind click event to hide overlay
+                def hide_main_overlay(event=None):
+                    canvas.delete(self.main_overlay_window)
+                    delattr(self, 'main_overlay_window')
+                
+                image_label.bind('<Button-1>', hide_main_overlay)
+                
+                # Create window for overlay (on top of everything)
+                self.main_overlay_window = canvas.create_window(
+                    0, 0,  # Will be repositioned by configure event
+                    window=image_label,
+                    anchor='center'
+                )
+                
+                # Bring overlay to front
+                canvas.tag_raise(self.main_overlay_window)
+                
+            else:
+                print(f"Overlay image not found: {img_path}")
+                
+        except Exception as e:
+            print(f"Error creating main overlay: {e}")
+    
+    def draw_dotted_pattern_on_canvas(self, canvas):
+        """Draw the dotted pattern background on a specific canvas"""
+        canvas.delete("dots")  # Clear existing dots
+        
+        # Get canvas dimensions
+        canvas_width = canvas.winfo_width()
+        canvas_height = canvas.winfo_height()
+        
+        # If canvas not yet rendered, use default size
+        if canvas_width <= 1:
+            canvas_width = 800
+        if canvas_height <= 1:
+            canvas_height = 600
+        
+        # Pattern settings (matching CSS: 30px 30px spacing)
+        dot_spacing = 30
+        dot_radius = 6  # 20% of 30px spacing
+        dot_color = '#f3fbf6'
+        
+        # Draw dots in a grid pattern
+        for x in range(0, canvas_width + dot_spacing, dot_spacing):
+            for y in range(0, canvas_height + dot_spacing, dot_spacing):
+                canvas.create_oval(
+                    x - dot_radius, y - dot_radius,
+                    x + dot_radius, y + dot_radius,
+                    fill=dot_color, outline=dot_color, tags="dots"
+                )
+    
+    def draw_dotted_pattern(self):
+        """Draw the dotted pattern background similar to CSS radial-gradient"""
+        self.draw_dotted_pattern_on_canvas(self.bg_canvas)
+    
+    def on_canvas_configure(self, event):
+        """Handle canvas resize events"""
+        # Redraw the dotted pattern
+        self.draw_dotted_pattern()
+        
+        # Reposition the wrapper frame to center
+        canvas_width = event.width
+        canvas_height = event.height
+        
+        # Update wrapper frame position
+        self.bg_canvas.coords(
+            self.bg_canvas.find_all()[0],  # Find the wrapper window
+            canvas_width // 2,
+            canvas_height // 2
+        )
+        
+        # Also recenter overlay if it exists
+        if hasattr(self, 'main_overlay_window'):
+            self.bg_canvas.coords(self.main_overlay_window, canvas_width//2, canvas_height//2)
         
     def qris_login(self):
         """Replace main form with QRIS payment form"""
@@ -199,19 +345,40 @@ class PhotoboothApp:
     
     def create_qris_payment_form(self):
         """Create the QRIS payment form interface"""
-        # Create main container frame
-        main_frame = tk.Frame(self.root, bg='#FFFFFF')
+        # Create main container frame with dotted pattern background
+        main_frame = tk.Frame(self.root, bg='#e6f5ec')
         main_frame.pack(expand=True, fill='both')
         
-        # Create wrapper frame for the QRIS payment
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
-        wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
+        # Create a canvas for the dotted pattern background
+        bg_canvas = tk.Canvas(main_frame, bg='#e6f5ec', highlightthickness=0)
+        bg_canvas.pack(expand=True, fill='both')
+        
+        # Draw the dotted pattern
+        self.draw_dotted_pattern_on_canvas(bg_canvas)
+        
+        # Create wrapper frame for the QRIS payment on top of canvas
+        wrapper_frame = tk.Frame(bg_canvas, bg='#A5DBEB', relief='flat', bd=0)
+        self.qris_wrapper_window = bg_canvas.create_window(
+            0, 0,  # Will be repositioned by configure event
+            window=wrapper_frame,
+            anchor='center'
+        )
+        
+        # Bind canvas resize to redraw pattern and recenter wrapper
+        def on_qris_canvas_configure(event):
+            self.draw_dotted_pattern_on_canvas(bg_canvas)
+            # Recenter the wrapper frame
+            canvas_width = event.width
+            canvas_height = event.height
+            bg_canvas.coords(self.qris_wrapper_window, canvas_width//2, canvas_height//2)
+        
+        bg_canvas.bind('<Configure>', on_qris_canvas_configure)
         
         # Title label
         title_label = tk.Label(
             wrapper_frame,
             text="Tagihan QRIS 30.000",
-            font=('Arial', 20, 'bold'),
+            font=self.font_large,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -221,7 +388,7 @@ class PhotoboothApp:
         self.qris_status_label = tk.Label(
             wrapper_frame,
             text="Membuat transaksi...",
-            font=('Arial', 14),
+            font=self.font_medium,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -235,7 +402,7 @@ class PhotoboothApp:
         self.qr_label = tk.Label(
             self.qr_frame,
             text="Memuat QR Code...",
-            font=('Arial', 12),
+            font=self.font_small,
             fg='#666666',
             bg='#FFFFFF',
             width=30,
@@ -247,7 +414,7 @@ class PhotoboothApp:
         instructions_label = tk.Label(
             wrapper_frame,
             text="Support semua Bank Indonesia",
-            font=('Arial', 12),
+            font=self.font_small,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -257,7 +424,7 @@ class PhotoboothApp:
         back_button = tk.Button(
             wrapper_frame,
             text="Kembali",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='#FFFFFF',
             bg='#DC3545',
             activebackground='#C82333',
@@ -295,19 +462,40 @@ class PhotoboothApp:
         self.auto_submit_timer = None
         self.is_processing = False
         
-        # Create main container frame
-        main_frame = tk.Frame(self.root, bg='#FFFFFF')
+        # Create main container frame with dotted pattern background
+        main_frame = tk.Frame(self.root, bg='#e6f5ec')
         main_frame.pack(expand=True, fill='both')
         
-        # Create wrapper frame for the card login (same style as QRIS)
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
-        wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
+        # Create a canvas for the dotted pattern background
+        bg_canvas = tk.Canvas(main_frame, bg='#e6f5ec', highlightthickness=0)
+        bg_canvas.pack(expand=True, fill='both')
+        
+        # Draw the dotted pattern
+        self.draw_dotted_pattern_on_canvas(bg_canvas)
+        
+        # Create wrapper frame for the card login on top of canvas
+        wrapper_frame = tk.Frame(bg_canvas, bg='#A5DBEB', relief='flat', bd=0)
+        self.card_wrapper_window = bg_canvas.create_window(
+            0, 0,  # Will be repositioned by configure event
+            window=wrapper_frame,
+            anchor='center'
+        )
+        
+        # Bind canvas resize to redraw pattern and recenter wrapper
+        def on_card_canvas_configure(event):
+            self.draw_dotted_pattern_on_canvas(bg_canvas)
+            # Recenter the wrapper frame
+            canvas_width = event.width
+            canvas_height = event.height
+            bg_canvas.coords(self.card_wrapper_window, canvas_width//2, canvas_height//2)
+        
+        bg_canvas.bind('<Configure>', on_card_canvas_configure)
         
         # Title label
         title_label = tk.Label(
             wrapper_frame,
             text="Masuk Dengan Kartu",
-            font=('Arial', 20, 'bold'),
+            font=self.font_large,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -317,7 +505,7 @@ class PhotoboothApp:
         self.card_status_label = tk.Label(
             wrapper_frame,
             text="Masukkan kode kartu Anda:",
-            font=('Arial', 14),
+            font=self.font_medium,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -330,7 +518,7 @@ class PhotoboothApp:
         # Card input field
         self.card_input = tk.Entry(
             input_frame,
-            font=('Arial', 16),
+            font=self.font_medium,
             fg='#0A3766',
             bg='#FFFFFF',
             width=25,
@@ -351,7 +539,7 @@ class PhotoboothApp:
         instructions_label = tk.Label(
             wrapper_frame,
             text="Ketik kode kartu atau tap kartu NFC",
-            font=('Arial', 12),
+            font=self.font_small,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -361,7 +549,7 @@ class PhotoboothApp:
         back_button = tk.Button(
             wrapper_frame,
             text="Kembali",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='#FFFFFF',
             bg='#DC3545',
             activebackground='#C82333',
@@ -544,23 +732,11 @@ class PhotoboothApp:
                 return False
     
     def update_network_status(self):
-        """Update the network status indicator and button states"""
+        """Update button states based on network connectivity"""
         if self.check_internet_connection():
-            # Online - Green background, "OK" text
-            self.network_status_box.config(
-                text="OK",
-                bg='#28a745',  # Green
-                fg='white'
-            )
             # Enable buttons when online
             self.enable_main_buttons()
         else:
-            # Offline - Red background, "OFF" text
-            self.network_status_box.config(
-                text="OFF",
-                bg='#dc3545',  # Red
-                fg='white'
-            )
             # Disable buttons when offline
             self.disable_main_buttons()
     
@@ -631,7 +807,7 @@ class PhotoboothApp:
         label = tk.Label(
             password_window,
             text="Masukkan kata sandi master:",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='#0A3766',
             bg='#A5DBEB'
         )
@@ -644,7 +820,7 @@ class PhotoboothApp:
         password_display = tk.Label(
             password_window,
             textvariable=self.password_var,
-            font=('Arial', 18, 'bold'),
+            font=self.font_button,
             fg='#0A3766',
             bg='white',
             width=15,
@@ -686,7 +862,7 @@ class PhotoboothApp:
             btn = tk.Button(
                 row1_frame,
                 text=str(num),
-                font=('Arial', 20, 'bold'),
+                font=self.font_large,
                 fg='white',
                 bg='#0A3766',
                 activebackground='#2980b9',
@@ -706,7 +882,7 @@ class PhotoboothApp:
             btn = tk.Button(
                 row2_frame,
                 text=str(num),
-                font=('Arial', 20, 'bold'),
+                font=self.font_large,
                 fg='white',
                 bg='#0A3766',
                 activebackground='#2980b9',
@@ -726,7 +902,7 @@ class PhotoboothApp:
             btn = tk.Button(
                 row3_frame,
                 text=str(num),
-                font=('Arial', 20, 'bold'),
+                font=self.font_large,
                 fg='white',
                 bg='#0A3766',
                 activebackground='#2980b9',
@@ -747,7 +923,7 @@ class PhotoboothApp:
         clear_btn = tk.Button(
             row4_frame,
             text="Clear",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#e74c3c',
             activebackground='#c0392b',
@@ -764,7 +940,7 @@ class PhotoboothApp:
         zero_btn = tk.Button(
             row4_frame,
             text="0",
-            font=('Arial', 20, 'bold'),
+            font=self.font_large,
             fg='white',
             bg='#0A3766',
             activebackground='#2980b9',
@@ -781,7 +957,7 @@ class PhotoboothApp:
         back_btn = tk.Button(
             row4_frame,
             text="Hapus",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#f39c12',
             activebackground='#e67e22',
@@ -945,7 +1121,7 @@ class PhotoboothApp:
                 # Start payment status monitoring
                 threading.Thread(target=self.monitor_payment_status, daemon=True).start()
             else:
-                self.show_error("Gagal mengunduh QR Code")
+                self.show_error("Gagal mendownload QR Code")
             
         except Exception as e:
             print(f"QR Code display error: {e}")
@@ -1046,7 +1222,7 @@ class PhotoboothApp:
         start_photo_button = tk.Button(
             wrapper_frame,
             text="Mulai Foto",
-            font=('Arial', 20, 'bold'),
+            font=self.font_large,
             fg='white',
             bg='#28a745',
             activebackground='#218838',
@@ -1198,7 +1374,7 @@ class PhotoboothApp:
         self.time_label = tk.Label(
             time_frame,
             text="08:00",
-            font=('Arial', 16, 'bold'),
+            font=self.font_medium,
             fg='black',
             bg='white'
         )
@@ -1208,7 +1384,7 @@ class PhotoboothApp:
         end_session_button = tk.Button(
             content_frame,
             text="KELUAR",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#DC3545',
             activebackground='#C82333',
@@ -1257,7 +1433,7 @@ class PhotoboothApp:
         warning_label = tk.Label(
             confirm_window,
             text="Sesi anda akan berakhir ketika melanjutkan ini,\nharap pastikan anda selesai berfoto dan menyimpan hasilnya",
-            font=('Arial', 12),
+            font=self.font_small,
             fg='#0A3766',
             bg='#A5DBEB',
             justify='center'
@@ -1272,7 +1448,7 @@ class PhotoboothApp:
         yes_button = tk.Button(
             button_frame,
             text="Iya",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#DC3545',
             activebackground='#C82333',
@@ -1290,7 +1466,7 @@ class PhotoboothApp:
         cancel_button = tk.Button(
             button_frame,
             text="Batal",
-            font=('Arial', 14, 'bold'),
+            font=self.font_button,
             fg='white',
             bg='#6C757D',
             activebackground='#5A6268',
@@ -1378,7 +1554,7 @@ class PhotoboothApp:
         title_label = tk.Label(
             main_frame,
             text=title,
-            font=('Arial', 16, 'bold'),
+            font=self.font_medium,
             fg='#DC3545',
             bg='#FFFFFF'
         )
@@ -1388,7 +1564,7 @@ class PhotoboothApp:
         message_label = tk.Label(
             main_frame,
             text=message,
-            font=('Arial', 12),
+            font=self.font_small,
             fg='#0A3766',
             bg='#FFFFFF',
             wraplength=350,
@@ -1400,7 +1576,7 @@ class PhotoboothApp:
         ok_button = tk.Button(
             main_frame,
             text="OK",
-            font=('Arial', 12, 'bold'),
+            font=self.font_small,
             fg='#FFFFFF',
             bg='#DC3545',
             activebackground='#C82333',
