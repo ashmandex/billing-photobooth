@@ -1,4 +1,8 @@
-tkinter
+# Core dependencies for Photobooth Application
 requests
 Pillow
 psutil
+
+# Note: tkinter is built-in with Python, no need to install
+# Note: ctypes is built-in with Python, no need to install
+# Note: Standard library modules (sys, socket, threading, time, json, hashlib, hmac, datetime, io, base64, subprocess, os) are built-in
