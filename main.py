@@ -104,9 +104,13 @@ class PhotoboothApp:
         # Draw the dotted pattern
         self.draw_dotted_pattern()
         
-        # Create wrapper frame for the options on top of canvas
-        wrapper_frame = tk.Frame(self.bg_canvas, bg='#A5DBEB', relief='flat', bd=0)
-        self.bg_canvas.create_window(
+        # Create wrapper frame for the options on top of canvas with light green background
+        wrapper_frame = tk.Frame(self.bg_canvas, bg='#e6f5ec', relief='flat', bd=0)
+        
+        # Store wrapper frame reference for better management
+        self.wrapper_frame = wrapper_frame
+        
+        self.wrapper_window = self.bg_canvas.create_window(
             self.bg_canvas.winfo_reqwidth() // 2,
             self.bg_canvas.winfo_reqheight() // 2,
             window=wrapper_frame,
@@ -116,102 +120,37 @@ class PhotoboothApp:
         # Bind canvas resize to redraw pattern and reposition wrapper
         self.bg_canvas.bind('<Configure>', self.on_canvas_configure)
         
-        # Title label
-        title_label = tk.Label(
-            wrapper_frame,
-            text="SELAMAT DATANG",
-            font=self.font_large,
-            fg='#0A3766',
-            bg='#A5DBEB',
-            pady=10
-        )
-        title_label.pack(pady=(30, 0))
+        # Button frame with matching background
+        button_frame = tk.Frame(wrapper_frame, bg='#e6f5ec')
+        button_frame.pack(pady=(30, 30), padx=40)
         
-        # Subtitle label
-        subtitle_label = tk.Label(
-            wrapper_frame,
-            text="Pilih metode untuk masuk:",
-            font=self.font_medium,
-            fg='#0A3766',
-            bg='#A5DBEB'
-        )
-        subtitle_label.pack(pady=(5, 20))
-        
-        # Button frame
-        button_frame = tk.Frame(wrapper_frame, bg='#A5DBEB')
-        button_frame.pack(pady=(0, 30), padx=40)
-        
-        # QRIS Button - store reference for enabling/disabling
-        self.qris_button = tk.Button(
+        # QRIS Button - using Label to eliminate all visual effects
+        self.qris_button = tk.Label(
             button_frame,
             text="Masuk Pakai QRIS",
             font=self.font_button,
             fg='white',
-            bg='#0A3766',
-            activebackground='#0A3766',
-            activeforeground='white',
-            relief='flat',
-            bd=0,
+            bg='#5AA47C',
             padx=30,
             pady=15,
-            cursor='hand2',
-            command=self.qris_login
+            cursor='hand2'
         )
+        self.qris_button.bind("<Button-1>", lambda e: self.qris_login())
         self.qris_button.pack(pady=10, fill='x')
         
-        # Card Button - store reference for enabling/disabling
-        self.card_button = tk.Button(
+        # Card Button - using Label to eliminate all visual effects
+        self.card_button = tk.Label(
             button_frame,
             text="Masuk Pakai Kartu",
             font=self.font_button,
             fg='white',
-            bg='#0A6641',
-            activebackground='#0A6641',
-            activeforeground='white',
-            relief='flat',
-            bd=0,
+            bg='#FF8C42',
             padx=30,
             pady=15,
-            cursor='hand2',
-            command=self.card_login
+            cursor='hand2'
         )
+        self.card_button.bind("<Button-1>", lambda e: self.card_login())
         self.card_button.pack(pady=10, fill='x')
-        
-        # Exit Button (initially hidden)
-        self.exit_button = tk.Button(
-            button_frame,
-            text="Keluar Aplikasi",
-            font=self.font_button,
-            fg='white',
-            bg='#C22121',
-            activebackground='#C22121',
-            activeforeground='white',
-            relief='flat',
-            bd=0,
-            padx=30,
-            pady=15,
-            cursor='hand2',
-            command=self.show_password_dialog
-        )
-        
-        # Toggle button for additional options (only shows exit button now)
-        self.toggle_button = tk.Button(
-            wrapper_frame,
-            text="Tampilkan opsi lain",
-            font=self.font_small,
-            fg='#0A3766',
-            bg='#A5DBEB',
-            activebackground='#A5DBEB',
-            activeforeground='#0A3766',
-            relief='flat',
-            bd=0,
-            cursor='hand2',
-            command=self.toggle_additional_options
-        )
-        self.toggle_button.pack(pady=(0, 20))
-        
-        # Track visibility state
-        self.additional_options_visible = False
         
         # Create overlay with main-img.png on main form
         self.create_main_overlay(self.bg_canvas)
@@ -221,59 +160,90 @@ class PhotoboothApp:
     
     def create_main_overlay(self, canvas):
         """Create overlay with main-img.png for main welcome form"""
-        try:
-            # Load the overlay image
-            img_path = os.path.join(os.path.dirname(__file__), "main-img.png")
-            if os.path.exists(img_path):
-                # Load and resize image
-                pil_image = Image.open(img_path)
-                
-                # Convert to RGBA to preserve transparency
-                if pil_image.mode != 'RGBA':
-                    pil_image = pil_image.convert('RGBA')
-                
-                # Resize to fit screen while maintaining aspect ratio
-                screen_width = self.root.winfo_screenwidth()
-                screen_height = self.root.winfo_screenheight()
-                
-                # Calculate size (make it cover most of the screen)
-                max_width = int(screen_width * 0.8)
-                max_height = int(screen_height * 0.8)
-                
-                pil_image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-                self.main_overlay_image = ImageTk.PhotoImage(pil_image)
-                
-                # Create overlay label directly on canvas (no frame background)
-                image_label = tk.Label(
-                    canvas,
-                    image=self.main_overlay_image,
-                    cursor='hand2',
-                    bd=0,
-                    highlightthickness=0
-                )
-                
-                # Bind click event to hide overlay
-                def hide_main_overlay(event=None):
-                    canvas.delete(self.main_overlay_window)
-                    delattr(self, 'main_overlay_window')
-                
-                image_label.bind('<Button-1>', hide_main_overlay)
-                
-                # Create window for overlay (on top of everything)
-                self.main_overlay_window = canvas.create_window(
-                    0, 0,  # Will be repositioned by configure event
-                    window=image_label,
-                    anchor='center'
-                )
-                
-                # Bring overlay to front
-                canvas.tag_raise(self.main_overlay_window)
-                
-            else:
-                print(f"Overlay image not found: {img_path}")
-                
-        except Exception as e:
-            print(f"Error creating main overlay: {e}")
+        def _create_overlay_after_render():
+            """Create overlay after canvas is fully rendered"""
+            try:
+                # Load the overlay image
+                img_path = os.path.join(os.path.dirname(__file__), "main-img.png")
+                if os.path.exists(img_path):
+                    # Load and resize image
+                    pil_image = Image.open(img_path)
+                    
+                    # Convert to RGB for better performance (no transparency needed)
+                    if pil_image.mode == 'RGBA':
+                        # Create white background and paste image
+                        background = Image.new('RGB', pil_image.size, (255, 255, 255))
+                        background.paste(pil_image, mask=pil_image.split()[-1] if pil_image.mode == 'RGBA' else None)
+                        pil_image = background
+                    elif pil_image.mode != 'RGB':
+                        pil_image = pil_image.convert('RGB')
+                    
+                    # Get actual canvas dimensions after rendering
+                    canvas.update_idletasks()  # Force update to get real dimensions
+                    canvas_width = canvas.winfo_width()
+                    canvas_height = canvas.winfo_height()
+                    
+                    # Use screen dimensions as fallback
+                    if canvas_width <= 1:
+                        canvas_width = self.root.winfo_screenwidth()
+                    if canvas_height <= 1:
+                        canvas_height = self.root.winfo_screenheight()
+                    
+                    # Calculate size (make it cover most of the screen) - optimized sizing
+                    max_width = int(canvas_width * 0.7)  # Reduced from 0.8 for better performance
+                    max_height = int(canvas_height * 0.7)
+                    
+                    # Use faster resampling for better performance
+                    pil_image.thumbnail((max_width, max_height), Image.Resampling.BILINEAR)
+                    self.main_overlay_image = ImageTk.PhotoImage(pil_image)
+                    
+                    # Create overlay label directly on canvas (no frame background)
+                    image_label = tk.Label(
+                        canvas,
+                        image=self.main_overlay_image,
+                        cursor='hand2',
+                        bd=0,
+                        highlightthickness=0,
+                        bg=canvas['bg']  # Match canvas background
+                    )
+                    
+                    # Bind click event to hide overlay
+                    def hide_main_overlay(event=None):
+                        if hasattr(self, 'main_overlay_window'):
+                            canvas.delete(self.main_overlay_window)
+                            delattr(self, 'main_overlay_window')
+                            # Clear image reference for memory cleanup
+                            if hasattr(self, 'main_overlay_image'):
+                                delattr(self, 'main_overlay_image')
+                    
+                    image_label.bind('<Button-1>', hide_main_overlay)
+                    
+                    # Create window for overlay at center
+                    self.main_overlay_window = canvas.create_window(
+                        canvas_width // 2,
+                        canvas_height // 2,
+                        window=image_label,
+                        anchor='center'
+                    )
+                    
+                    # Force overlay to highest z-index
+                    canvas.tag_raise(self.main_overlay_window)
+                    
+                    # Ensure wrapper frame stays below overlay
+                    if hasattr(self, 'wrapper_window'):
+                        canvas.tag_lower(self.wrapper_window, self.main_overlay_window)
+                    
+                    # Store canvas reference for later use
+                    self.overlay_canvas = canvas
+                    
+                else:
+                    print(f"Overlay image not found: {img_path}")
+                    
+            except Exception as e:
+                print(f"Error creating main overlay: {e}")
+        
+        # Reduced delay for faster loading on all PCs
+        canvas.after(50, _create_overlay_after_render)
     
     def draw_dotted_pattern_on_canvas(self, canvas):
         """Draw the dotted pattern background on a specific canvas"""
@@ -312,20 +282,30 @@ class PhotoboothApp:
         # Redraw the dotted pattern
         self.draw_dotted_pattern()
         
-        # Reposition the wrapper frame to center
+        # Get canvas dimensions
         canvas_width = event.width
         canvas_height = event.height
         
-        # Update wrapper frame position
-        self.bg_canvas.coords(
-            self.bg_canvas.find_all()[0],  # Find the wrapper window
-            canvas_width // 2,
-            canvas_height // 2
-        )
+        # Update wrapper frame position using stored reference
+        if hasattr(self, 'wrapper_window'):
+            try:
+                self.bg_canvas.coords(self.wrapper_window, canvas_width // 2, canvas_height // 2)
+            except:
+                pass
         
-        # Also recenter overlay if it exists
+        # Also recenter overlay if it exists and ensure it stays on top
         if hasattr(self, 'main_overlay_window'):
-            self.bg_canvas.coords(self.main_overlay_window, canvas_width//2, canvas_height//2)
+            try:
+                self.bg_canvas.coords(self.main_overlay_window, canvas_width//2, canvas_height//2)
+                # Force overlay to stay on top after repositioning
+                self.bg_canvas.tag_raise(self.main_overlay_window)
+                # Ensure wrapper stays below overlay
+                if hasattr(self, 'wrapper_window'):
+                    self.bg_canvas.tag_lower(self.wrapper_window, self.main_overlay_window)
+            except:
+                # If overlay window is invalid, remove the reference
+                if hasattr(self, 'main_overlay_window'):
+                    delattr(self, 'main_overlay_window')
         
     def qris_login(self):
         """Replace main form with QRIS payment form"""
@@ -427,13 +407,17 @@ class PhotoboothApp:
             font=self.font_button,
             fg='#FFFFFF',
             bg='#DC3545',
-            activebackground='#C82333',
+            activebackground='#DC3545',
             activeforeground='#FFFFFF',
+            disabledforeground='#FFFFFF',
             relief='flat',
             bd=0,
             padx=30,
             pady=10,
-            command=self.back_to_main
+            command=self.back_to_main,
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         back_button.pack(pady=(20, 30))
         
@@ -552,13 +536,17 @@ class PhotoboothApp:
             font=self.font_button,
             fg='#FFFFFF',
             bg='#DC3545',
-            activebackground='#C82333',
+            activebackground='#DC3545',
             activeforeground='#FFFFFF',
+            disabledforeground='#FFFFFF',
             relief='flat',
             bd=0,
             padx=30,
             pady=10,
-            command=self.back_to_main
+            command=self.back_to_main,
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         back_button.pack(pady=(20, 30))
     
@@ -704,18 +692,6 @@ class PhotoboothApp:
     def admin_login(self):
         print("Admin login selected")
         # Add your admin login logic here
-        
-    def toggle_additional_options(self):
-        if self.additional_options_visible:
-            # Hide the exit button
-            self.exit_button.pack_forget()
-            self.toggle_button.config(text="Tampilkan opsi lain")
-            self.additional_options_visible = False
-        else:
-            # Show the exit button only
-            self.exit_button.pack(pady=10, fill='x')
-            self.toggle_button.config(text="Sembunyikan opsi lain")
-            self.additional_options_visible = True
     
     def check_internet_connection(self):
         """Check if internet connection is available"""
@@ -744,31 +720,35 @@ class PhotoboothApp:
         """Enable QRIS and Card buttons when online"""
         if hasattr(self, 'qris_button') and self.qris_button.winfo_exists():
             self.qris_button.config(
-                state='normal',
-                bg='#0A3766',
+                bg='#5AA47C',
                 cursor='hand2'
             )
+            # Re-bind click event
+            self.qris_button.bind("<Button-1>", lambda e: self.qris_login())
         if hasattr(self, 'card_button') and self.card_button.winfo_exists():
             self.card_button.config(
-                state='normal',
-                bg='#0A6641',
+                bg='#FF8C42',
                 cursor='hand2'
             )
+            # Re-bind click event
+            self.card_button.bind("<Button-1>", lambda e: self.card_login())
     
     def disable_main_buttons(self):
         """Disable QRIS and Card buttons when offline"""
         if hasattr(self, 'qris_button') and self.qris_button.winfo_exists():
             self.qris_button.config(
-                state='disabled',
                 bg='#666666',
                 cursor='arrow'
             )
+            # Unbind click event
+            self.qris_button.unbind("<Button-1>")
         if hasattr(self, 'card_button') and self.card_button.winfo_exists():
             self.card_button.config(
-                state='disabled',
                 bg='#666666',
                 cursor='arrow'
             )
+            # Unbind click event
+            self.card_button.unbind("<Button-1>")
     
     def network_monitor_thread(self):
         """Background thread to continuously monitor network status"""
@@ -865,7 +845,7 @@ class PhotoboothApp:
                 font=self.font_large,
                 fg='white',
                 bg='#0A3766',
-                activebackground='#2980b9',
+                activebackground='#0A3766',
                 activeforeground='white',
                 width=5,
                 height=2,
@@ -885,7 +865,7 @@ class PhotoboothApp:
                 font=self.font_large,
                 fg='white',
                 bg='#0A3766',
-                activebackground='#2980b9',
+                activebackground='#0A3766',
                 activeforeground='white',
                 width=5,
                 height=2,
@@ -905,7 +885,7 @@ class PhotoboothApp:
                 font=self.font_large,
                 fg='white',
                 bg='#0A3766',
-                activebackground='#2980b9',
+                activebackground='#0A3766',
                 activeforeground='white',
                 width=5,
                 height=2,
@@ -926,7 +906,7 @@ class PhotoboothApp:
             font=self.font_button,
             fg='white',
             bg='#e74c3c',
-            activebackground='#c0392b',
+            activebackground='#e74c3c',
             activeforeground='white',
             width=5,
             height=2,
@@ -943,7 +923,7 @@ class PhotoboothApp:
             font=self.font_large,
             fg='white',
             bg='#0A3766',
-            activebackground='#2980b9',
+            activebackground='#0A3766',
             activeforeground='white',
             width=5,
             height=2,
@@ -960,13 +940,17 @@ class PhotoboothApp:
             font=self.font_button,
             fg='white',
             bg='#f39c12',
-            activebackground='#e67e22',
+            activebackground='#f39c12',
             activeforeground='white',
+            disabledforeground='white',
             width=5,
             height=2,
-            relief='raised',
-            bd=3,
-            command=backspace
+            relief='flat',
+            bd=0,
+            command=backspace,
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         back_btn.pack(side=tk.LEFT, padx=5)
         
@@ -1225,14 +1209,18 @@ class PhotoboothApp:
             font=self.font_large,
             fg='white',
             bg='#28a745',
-            activebackground='#218838',
+            activebackground='#28a745',
             activeforeground='white',
+            disabledforeground='white',
             relief='flat',
             bd=0,
             padx=50,
             pady=20,
             cursor='hand2',
-            command=self.start_photo_session
+            command=self.start_photo_session,
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         start_photo_button.pack(padx=40, pady=40)
     
@@ -1387,14 +1375,18 @@ class PhotoboothApp:
             font=self.font_button,
             fg='white',
             bg='#DC3545',
-            activebackground='#C82333',
+            activebackground='#DC3545',
             activeforeground='white',
+            disabledforeground='white',
             relief='flat',
             bd=0,
             padx=15,
             pady=7,
             cursor='hand2',
-            command=self.confirm_end_session
+            command=self.confirm_end_session,
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         end_session_button.pack(side='left')
         
@@ -1451,14 +1443,18 @@ class PhotoboothApp:
             font=self.font_button,
             fg='white',
             bg='#DC3545',
-            activebackground='#C82333',
+            activebackground='#DC3545',
             activeforeground='white',
-            relief='raised',
-            bd=2,
+            disabledforeground='white',
+            relief='flat',
+            bd=0,
             padx=30,
             pady=10,
             cursor='hand2',
-            command=lambda: self.end_session_confirmed(confirm_window)
+            command=lambda: self.end_session_confirmed(confirm_window),
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         yes_button.pack(side='left', padx=10)
         
@@ -1469,14 +1465,18 @@ class PhotoboothApp:
             font=self.font_button,
             fg='white',
             bg='#6C757D',
-            activebackground='#5A6268',
+            activebackground='#6C757D',
             activeforeground='white',
-            relief='raised',
-            bd=2,
+            disabledforeground='white',
+            relief='flat',
+            bd=0,
             padx=30,
             pady=10,
             cursor='hand2',
-            command=confirm_window.destroy
+            command=confirm_window.destroy,
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         cancel_button.pack(side='left', padx=10)
     
@@ -1579,14 +1579,18 @@ class PhotoboothApp:
             font=self.font_small,
             fg='#FFFFFF',
             bg='#DC3545',
-            activebackground='#C82333',
+            activebackground='#DC3545',
             activeforeground='#FFFFFF',
+            disabledforeground='#FFFFFF',
             relief='flat',
             bd=0,
             padx=30,
             pady=8,
             cursor='hand2',
-            command=error_window.destroy
+            command=error_window.destroy,
+            highlightthickness=0,
+            borderwidth=0,
+            overrelief='flat'
         )
         ok_button.pack()
         
@@ -1607,7 +1611,6 @@ class PhotoboothApp:
     
     def back_to_main(self):
         """Return to main form with all buttons"""
-        """Return to main form with all buttons"""
         print("Back to main called - starting cleanup...")
         
         # Stop any monitoring
@@ -1620,6 +1623,14 @@ class PhotoboothApp:
         self.current_view = "main"
         print("Cleared transaction data")
         
+        # Clean up overlay references before destroying widgets
+        if hasattr(self, 'main_overlay_window'):
+            delattr(self, 'main_overlay_window')
+        if hasattr(self, 'overlay_canvas'):
+            delattr(self, 'overlay_canvas')
+        if hasattr(self, 'main_overlay_image'):
+            delattr(self, 'main_overlay_image')
+        
         # Clear all widgets from root
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -1628,6 +1639,10 @@ class PhotoboothApp:
         # Reset any state variables
         self.additional_options_visible = False
         print("Reset state variables")
+        
+        # Force garbage collection to clean up any lingering references
+        import gc
+        gc.collect()
         
         # Only recreate widgets, don't setup window again
         self.create_widgets()
