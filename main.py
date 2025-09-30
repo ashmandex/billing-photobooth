@@ -1194,34 +1194,47 @@ class PhotoboothApp:
     
     def create_photo_start_form(self):
         """Create form with centered 'Mulai Foto' button"""
-        # Create main container frame
-        main_frame = tk.Frame(self.root, bg='#FFFFFF')
+        # Create main container frame with dotted pattern background
+        main_frame = tk.Frame(self.root, bg='#e6f5ec')
         main_frame.pack(expand=True, fill='both')
         
-        # Create wrapper frame for the button only
-        wrapper_frame = tk.Frame(main_frame, bg='#A5DBEB', relief='flat', bd=0)
-        wrapper_frame.place(relx=0.5, rely=0.5, anchor='center')
+        # Create a canvas for the dotted pattern background
+        bg_canvas = tk.Canvas(main_frame, bg='#e6f5ec', highlightthickness=0)
+        bg_canvas.pack(expand=True, fill='both')
         
-        # Mulai Foto button (centered)
-        start_photo_button = tk.Button(
+        # Draw the dotted pattern
+        self.draw_dotted_pattern_on_canvas(bg_canvas)
+        
+        # Create wrapper frame for the button on top of canvas
+        wrapper_frame = tk.Frame(bg_canvas, bg='#e6f5ec', relief='flat', bd=0)
+        self.photo_wrapper_window = bg_canvas.create_window(
+            0, 0,  # Will be repositioned by configure event
+            window=wrapper_frame,
+            anchor='center'
+        )
+        
+        # Bind canvas resize to redraw pattern and recenter wrapper
+        def on_photo_canvas_configure(event):
+            self.draw_dotted_pattern_on_canvas(bg_canvas)
+            # Recenter the wrapper frame
+            canvas_width = event.width
+            canvas_height = event.height
+            bg_canvas.coords(self.photo_wrapper_window, canvas_width//2, canvas_height//2)
+        
+        bg_canvas.bind('<Configure>', on_photo_canvas_configure)
+        
+        # Mulai Foto button (same style as QRIS button)
+        start_photo_button = tk.Label(
             wrapper_frame,
             text="Mulai Foto",
-            font=self.font_large,
+            font=self.font_button,
             fg='white',
-            bg='#28a745',
-            activebackground='#28a745',
-            activeforeground='white',
-            disabledforeground='white',
-            relief='flat',
-            bd=0,
-            padx=50,
-            pady=20,
-            cursor='hand2',
-            command=self.start_photo_session,
-            highlightthickness=0,
-            borderwidth=0,
-            overrelief='flat'
+            bg='#5AA47C',
+            padx=30,
+            pady=15,
+            cursor='hand2'
         )
+        start_photo_button.bind("<Button-1>", lambda e: self.start_photo_session())
         start_photo_button.pack(padx=40, pady=40)
     
     def is_dslr_booth_running(self):
