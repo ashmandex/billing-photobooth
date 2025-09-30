@@ -337,7 +337,7 @@ class PhotoboothApp:
         self.draw_dotted_pattern_on_canvas(bg_canvas)
         
         # Create wrapper frame for the QRIS payment on top of canvas
-        wrapper_frame = tk.Frame(bg_canvas, bg='#A5DBEB', relief='flat', bd=0)
+        wrapper_frame = tk.Frame(bg_canvas, bg='#e6f5ec', relief='flat', bd=0)
         self.qris_wrapper_window = bg_canvas.create_window(
             0, 0,  # Will be repositioned by configure event
             window=wrapper_frame,
@@ -359,8 +359,8 @@ class PhotoboothApp:
             wrapper_frame,
             text="Tagihan QRIS 30.000",
             font=self.font_large,
-            fg='#0A3766',
-            bg='#A5DBEB'
+            fg='#2e4e3f',
+            bg='#e6f5ec'
         )
         title_label.pack(pady=(30, 0))
         
@@ -369,8 +369,8 @@ class PhotoboothApp:
             wrapper_frame,
             text="Membuat transaksi...",
             font=self.font_medium,
-            fg='#0A3766',
-            bg='#A5DBEB'
+            fg='#2e4e3f',
+            bg='#e6f5ec'
         )
         self.qris_status_label.pack(pady=(5, 10))
         
@@ -395,8 +395,8 @@ class PhotoboothApp:
             wrapper_frame,
             text="Support semua Bank Indonesia",
             font=self.font_small,
-            fg='#0A3766',
-            bg='#A5DBEB'
+            fg='#2e4e3f',
+            bg='#e6f5ec'
         )
         instructions_label.pack(pady=10)
         
@@ -458,7 +458,7 @@ class PhotoboothApp:
         self.draw_dotted_pattern_on_canvas(bg_canvas)
         
         # Create wrapper frame for the card login on top of canvas
-        wrapper_frame = tk.Frame(bg_canvas, bg='#A5DBEB', relief='flat', bd=0)
+        wrapper_frame = tk.Frame(bg_canvas, bg='#e6f5ec', relief='flat', bd=0)
         self.card_wrapper_window = bg_canvas.create_window(
             0, 0,  # Will be repositioned by configure event
             window=wrapper_frame,
@@ -480,8 +480,8 @@ class PhotoboothApp:
             wrapper_frame,
             text="Masuk Dengan Kartu",
             font=self.font_large,
-            fg='#0A3766',
-            bg='#A5DBEB'
+            fg='#2e4e3f',
+            bg='#e6f5ec'
         )
         title_label.pack(pady=(30, 0))
         
@@ -490,8 +490,8 @@ class PhotoboothApp:
             wrapper_frame,
             text="Masukkan kode kartu Anda:",
             font=self.font_medium,
-            fg='#0A3766',
-            bg='#A5DBEB'
+            fg='#2e4e3f',
+            bg='#e6f5ec'
         )
         self.card_status_label.pack(pady=(5, 20))
         
@@ -503,7 +503,7 @@ class PhotoboothApp:
         self.card_input = tk.Entry(
             input_frame,
             font=self.font_medium,
-            fg='#0A3766',
+            fg='#2e4e3f',
             bg='#FFFFFF',
             width=25,
             justify='center',
@@ -524,8 +524,8 @@ class PhotoboothApp:
             wrapper_frame,
             text="Ketik kode kartu atau tap kartu NFC",
             font=self.font_small,
-            fg='#0A3766',
-            bg='#A5DBEB'
+            fg='#2e4e3f',
+            bg='#e6f5ec'
         )
         instructions_label.pack(pady=10)
         
@@ -591,7 +591,7 @@ class PhotoboothApp:
         
         # Set processing state
         self.is_processing = True
-        self.card_status_label.config(text="Memverifikasi kartu...", fg='#0A3766')
+        self.card_status_label.config(text="Memverifikasi kartu...", fg='#2e4e3f')
         
         # Clear input immediately after validation
         self.card_input.delete(0, tk.END)
@@ -686,7 +686,7 @@ class PhotoboothApp:
         if hasattr(self, 'card_input') and self.card_input.winfo_exists():
             self.card_input.delete(0, tk.END)
             self.card_input.focus_set()
-            self.card_status_label.config(text="Masukkan kode kartu Anda:", fg='#0A3766')
+            self.card_status_label.config(text="Masukkan kode kartu Anda:", fg='#2e4e3f')
             self.is_processing = False
         
     def admin_login(self):
