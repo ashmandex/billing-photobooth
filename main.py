@@ -83,8 +83,8 @@ class PhotoboothApp:
         # Make window fullscreen
         self.root.attributes('-fullscreen', True)
         
-        # Disable window controls (minimize, maximize, close)
-        self.root.overrideredirect(True)
+        # Keep window in taskbar and Alt+Tab (removed overrideredirect)
+        # This allows the application to be accessible via Alt+Tab
         
         # Set background color to match the CSS design
         self.root.configure(bg='#e6f5ec')
